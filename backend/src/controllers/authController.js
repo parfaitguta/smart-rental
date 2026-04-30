@@ -4,6 +4,7 @@ import crypto from 'crypto'
 import pool from '../config/db.js'
 import { createUser, findUserByEmail, findUserById } from '../models/userModel.js'
 import { sendResetEmail, sendOTPEmail } from '../config/email.js'
+import { LOG } from '../utils/activityLogger.js'
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -15,7 +16,6 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
-// POST /api/auth/register
 export const register = async (req, res) => {
   try {
     const { full_name, email, phone, password, role } = req.body
@@ -47,6 +47,8 @@ export const register = async (req, res) => {
       console.error('❌ OTP email failed:', emailError.message)
     }
 
+    await LOG.register(userId, req.ip)
+
     res.status(201).json({
       message: 'Account created! Please check your email for the OTP verification code.',
       userId,
@@ -57,7 +59,6 @@ export const register = async (req, res) => {
   }
 }
 
-// POST /api/auth/verify-otp
 export const verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body
@@ -89,7 +90,6 @@ export const verifyOTP = async (req, res) => {
   }
 }
 
-// POST /api/auth/resend-otp
 export const resendOTP = async (req, res) => {
   try {
     const { email } = req.body
@@ -127,7 +127,6 @@ export const resendOTP = async (req, res) => {
   }
 }
 
-// POST /api/auth/login
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body
@@ -155,6 +154,7 @@ export const login = async (req, res) => {
     }
 
     const token = generateToken(user.id)
+    await LOG.login(user.id, req.ip)
 
     res.json({
       message: 'Login successful',
@@ -172,7 +172,6 @@ export const login = async (req, res) => {
   }
 }
 
-// POST /api/auth/forgot-password
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body
@@ -208,7 +207,6 @@ export const forgotPassword = async (req, res) => {
   }
 }
 
-// POST /api/auth/reset-password/:token
 export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params
@@ -240,7 +238,6 @@ export const resetPassword = async (req, res) => {
   }
 }
 
-// GET /api/auth/profile
 export const getProfile = async (req, res) => {
   try {
     const user = await findUserById(req.user.id)
@@ -250,7 +247,6 @@ export const getProfile = async (req, res) => {
   }
 }
 
-// PUT /api/auth/profile
 export const updateProfile = async (req, res) => {
   try {
     const { full_name, phone } = req.body
@@ -264,6 +260,8 @@ export const updateProfile = async (req, res) => {
       [full_name, phone, req.user.id]
     )
 
+    await LOG.profileUpdated(req.user.id, req.ip)
+
     const user = await findUserById(req.user.id)
     res.json({ message: 'Profile updated successfully', user })
   } catch (error) {
@@ -271,7 +269,6 @@ export const updateProfile = async (req, res) => {
   }
 }
 
-// PUT /api/auth/change-password
 export const changePassword = async (req, res) => {
   try {
     const { current_password, new_password } = req.body
@@ -284,7 +281,6 @@ export const changePassword = async (req, res) => {
     }
 
     const user = await findUserByEmail(req.user.email)
-
     const isMatch = await bcrypt.compare(current_password, user.password_hash)
     if (!isMatch) {
       return res.status(401).json({ message: 'Current password is incorrect' })
@@ -295,6 +291,8 @@ export const changePassword = async (req, res) => {
       'UPDATE users SET password_hash = ? WHERE id = ?',
       [password_hash, req.user.id]
     )
+
+    await LOG.passwordChanged(req.user.id, req.ip)
 
     res.json({ message: 'Password changed successfully' })
   } catch (error) {

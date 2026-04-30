@@ -5,7 +5,7 @@ export const createRental = async (data) => {
   const [result] = await pool.query(
     `INSERT INTO rentals (property_id, tenant_id, start_date, end_date, monthly_rent) 
      VALUES (?, ?, ?, ?, ?)`,
-    [property_id, tenant_id, start_date, end_date, monthly_rent]
+    [property_id, tenant_id, start_date, end_date || null, monthly_rent]
   )
   return result.insertId
 }
@@ -27,7 +27,7 @@ export const getRentalById = async (id) => {
 
 export const getRentalsByLandlord = async (landlord_id) => {
   const [rows] = await pool.query(
-    `SELECT r.*, 
+    `SELECT r.*,
             p.title as property_title, p.province, p.district,
             u.full_name as tenant_name, u.phone as tenant_phone, u.email as tenant_email
      FROM rentals r
@@ -42,7 +42,7 @@ export const getRentalsByLandlord = async (landlord_id) => {
 
 export const getRentalsByTenant = async (tenant_id) => {
   const [rows] = await pool.query(
-    `SELECT r.*, 
+    `SELECT r.*,
             p.title as property_title, p.province, p.district,
             u.full_name as landlord_name, u.phone as landlord_phone
      FROM rentals r
