@@ -1,7 +1,8 @@
 import express from 'express'
 import {
   createRentalAgreement, getLandlordRentals,
-  getTenantRentals, getRentalDetail, terminateRental
+  getTenantRentals, getRentalDetail, terminateRental,
+  getMonthlyBreakdown
 } from '../controllers/rentalController.js'
 import { protect, allowRoles } from '../middleware/authMiddleware.js'
 
@@ -123,5 +124,27 @@ router.get('/:id', protect, getRentalDetail)
  *         description: Rental not found
  */
 router.put('/:id/terminate', protect, allowRoles('landlord', 'admin'), terminateRental)
+
+/**
+ * @swagger
+ * /api/rentals/{id}/monthly-breakdown:
+ *   get:
+ *     summary: Get monthly payment breakdown for a rental
+ *     tags: [Rentals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Monthly payment breakdown with calculations
+ *       403:
+ *         description: Not authorized
+ */
+router.get('/:id/monthly-breakdown', protect, getMonthlyBreakdown)
 
 export default router

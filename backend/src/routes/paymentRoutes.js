@@ -4,6 +4,7 @@ import {
   tenantPayments, paymentSummary, monthlyReport, updateStatus
 } from '../controllers/paymentController.js'
 import { protect, allowRoles } from '../middleware/authMiddleware.js'
+import pool from '../config/db.js'
 
 const router = express.Router()
 
@@ -102,6 +103,45 @@ router.get('/report', protect, allowRoles('landlord', 'admin'), monthlyReport)
  *         description: List of payments
  */
 router.get('/landlord', protect, allowRoles('landlord', 'admin'), landlordPayments)
+
+/**
+ * @swagger
+ * /api/payments/rental-summary:
+ *   get:
+ *     summary: Get rental payment summary with remaining balances (landlord only)
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of rentals with payment summary
+ */
+router.get('/rental-summary', protect, allowRoles('landlord', 'admin'), async (req, res) => {
+  try {
+    const [rentals] = await pool.query(
+      `SELECT 
+        r.id as rental_id,
+        p.title as property_title,
+        u.full_name as tenant_name,
+        r.monthly_rent,
+        COALESCE(SUM(pay.amount), 0) as total_paid,
+        r.monthly_rent - COALESCE(SUM(pay.amount), 0) as remaining_balance
+       FROM rentals r
+       JOIN properties p ON r.property_id = p.id
+       JOIN users u ON r.tenant_id = u.id
+       LEFT JOIN payments pay ON r.id = pay.rental_id AND pay.status = 'paid'
+       WHERE p.landlord_id = ?
+       GROUP BY r.id, p.title, u.full_name, r.monthly_rent
+       ORDER BY remaining_balance DESC`,
+      [req.user.id]
+    )
+    
+    res.json({ rentals: rentals })
+  } catch (error) {
+    console.error('Error getting rental summary:', error)
+    res.status(500).json({ message: 'Server error', error: error.message })
+  }
+})
 
 /**
  * @swagger

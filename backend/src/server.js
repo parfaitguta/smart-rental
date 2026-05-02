@@ -34,9 +34,12 @@ import reviewRoutes from './routes/reviewRoutes.js'
 import receiptRoutes from './routes/receiptRoutes.js'
 import leaseRoutes from './routes/leaseRoutes.js'
 import { setupSwagger } from './config/swagger.js'
+import invoiceRoutes from './routes/invoiceRoutes.js'
+import activityRoutes from './routes/activityRoutes.js'  // ADD THIS LINE
 
 setupSwagger(app)
 
+app.use('/api/invoices', invoiceRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/properties', propertyRoutes)
 app.use('/api/requests', rentalRequestRoutes)
@@ -52,6 +55,7 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/reviews', reviewRoutes)
 app.use('/api/receipts', receiptRoutes)
 app.use('/api/lease', leaseRoutes)
+app.use('/api/activities', activityRoutes)  // ADD THIS LINE
 
 app.get('/', async (req, res) => {
   try {
