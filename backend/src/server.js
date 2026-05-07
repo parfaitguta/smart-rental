@@ -57,10 +57,14 @@ app.use('/api/receipts', receiptRoutes)
 app.use('/api/lease', leaseRoutes)
 app.use('/api/activities', activityRoutes)
 
-app.get('/', async (req, res) => {
+app.get('/', (req, res) => {
+  res.json({ message: '✅ Smart Rental API is running', status: 'ok' })
+})
+
+app.get('/health', async (req, res) => {
   try {
     await pool.query('SELECT 1')
-    res.json({ message: '✅ Smart Rental API is running', db: 'connected' })
+    res.json({ message: '✅ Database connected', db: 'connected' })
   } catch (error) {
     res.status(500).json({ message: '❌ Database connection failed', error: error.message })
   }
