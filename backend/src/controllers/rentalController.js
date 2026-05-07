@@ -122,11 +122,11 @@ export const getMonthlyBreakdown = async (req, res) => {
     // Generate all 12 months of the current year
     const monthsList = []
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-    
+
     for (let month = 1; month <= 12; month++) {
       const monthName = monthNames[month - 1]
       const monthYear = `${currentYear}-${String(month).padStart(2, '0')}`
-      
+
       monthsList.push({
         year: currentYear,
         month: month,
@@ -139,8 +139,8 @@ export const getMonthlyBreakdown = async (req, res) => {
 
     // Get all payments for this rental
     const [payments] = await pool.query(
-      `SELECT amount, payment_date, status, notes 
-       FROM payments 
+      `SELECT amount, payment_date, status, notes
+       FROM payments
        WHERE rental_id = ? AND status = 'paid'
        ORDER BY payment_date`,
       [id]
@@ -150,7 +150,7 @@ export const getMonthlyBreakdown = async (req, res) => {
     const monthlyBreakdown = monthsList.map(month => {
       let paidAmount = 0
       let paymentDetails = []
-      
+
       payments.forEach(payment => {
         const paymentDate = new Date(payment.payment_date)
         if (paymentDate.getFullYear() === month.year && paymentDate.getMonth() + 1 === month.month) {
@@ -162,9 +162,9 @@ export const getMonthlyBreakdown = async (req, res) => {
           })
         }
       })
-      
+
       const remaining = monthlyRent - paidAmount
-      
+
       return {
         ...month,
         monthly_rent: monthlyRent,

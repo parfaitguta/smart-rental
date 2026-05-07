@@ -11,7 +11,9 @@ import {
   getRentalPaymentHistory,
   getMyPayments,
   getLandlordPaymentsAll,
-  getCurrentMonthStatus
+  getCurrentMonthStatus,
+  getInvoiceStatus,
+  cancelInvoice
 } from '../controllers/invoiceController.js'
 import { protect } from '../middleware/authMiddleware.js'
 
@@ -36,6 +38,10 @@ router.post('/verify', protect, verifyPayment)
 
 router.get('/rental/:rental_id/payment-history', protect, getRentalPaymentHistory)
 router.get('/rental/:rental_id/current-status', protect, getCurrentMonthStatus)
+
+// Invoice status and cancellation
+router.get('/:id/status', protect, getInvoiceStatus)
+router.put('/:id/cancel', protect, cancelInvoice)
 
 router.route('/:id')
   .get(protect, getInvoice)

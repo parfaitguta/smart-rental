@@ -3,7 +3,7 @@ import pool from '../config/db.js'
 export const createRental = async (data) => {
   const { property_id, tenant_id, start_date, end_date, monthly_rent } = data
   const [result] = await pool.query(
-    `INSERT INTO rentals (property_id, tenant_id, start_date, end_date, monthly_rent) 
+    `INSERT INTO rentals (property_id, tenant_id, start_date, end_date, monthly_rent)
      VALUES (?, ?, ?, ?, ?)`,
     [property_id, tenant_id, start_date, end_date || null, monthly_rent]
   )
@@ -12,7 +12,7 @@ export const createRental = async (data) => {
 
 export const getRentalById = async (id) => {
   const [rows] = await pool.query(
-    `SELECT r.*, 
+    `SELECT r.*,
             p.title as property_title, p.province, p.district, p.sector,
             p.landlord_id,
             u.full_name as tenant_name, u.phone as tenant_phone, u.email as tenant_email
@@ -44,7 +44,8 @@ export const getRentalsByTenant = async (tenant_id) => {
   const [rows] = await pool.query(
     `SELECT r.*,
             p.title as property_title, p.province, p.district,
-            u.full_name as landlord_name, u.phone as landlord_phone
+            p.landlord_id,
+            u.full_name as landlord_name, u.phone as landlord_phone, u.email as landlord_email
      FROM rentals r
      JOIN properties p ON r.property_id = p.id
      JOIN users u ON p.landlord_id = u.id

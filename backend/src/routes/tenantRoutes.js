@@ -1,7 +1,8 @@
 import express from 'express'
 import {
   getMyTenants, getTenantDetail, addNote,
-  updateStatus, terminateTenancy, deleteNote
+  updateStatus, terminateTenancy, deleteNote,
+  getLandlordTenants, getMonthlyBreakdown
 } from '../controllers/tenantController.js'
 import { protect, allowRoles } from '../middleware/authMiddleware.js'
 
@@ -20,6 +21,40 @@ const router = express.Router()
  *         description: List of tenants
  */
 router.get('/', protect, allowRoles('landlord', 'admin'), getMyTenants)
+
+/**
+ * @swagger
+ * /api/tenants/landlord:
+ *   get:
+ *     summary: Get all tenants for landlord (mobile app)
+ *     tags: [Tenants]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of tenants with properties
+ */
+router.get('/landlord', protect, allowRoles('landlord', 'admin'), getLandlordTenants)
+
+/**
+ * @swagger
+ * /api/tenants/rental/{rentalId}/monthly-breakdown:
+ *   get:
+ *     summary: Get monthly payment breakdown for a rental
+ *     tags: [Tenants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: rentalId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Monthly payment breakdown
+ */
+router.get('/rental/:rentalId/monthly-breakdown', protect, allowRoles('landlord', 'admin', 'tenant'), getMonthlyBreakdown)
 
 /**
  * @swagger

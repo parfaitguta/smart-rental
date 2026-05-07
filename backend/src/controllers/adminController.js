@@ -194,3 +194,139 @@ export const getAllRequests = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message })
   }
 }
+
+// GET /api/admin/reports - Generate reports
+export const getReports = async (req, res) => {
+  try {
+    const { type = 'monthly', year = new Date().getFullYear() } = req.query;
+    
+    let reportData = {};
+
+    if (type === 'monthly') {
+      // Get monthly revenue breakdown
+      const [monthlyData] = await pool.query(`
+        SELECT 
+          MONTHNAME(payment_date) as month,
+          MONTH(payment_date) as month_num,
+          COUNT(*) as payment_count,
+          COALESCE(SUM(amount), 0) as revenue
+        FROM payments
+        WHERE YEAR(payment_date) = ? AND status = 'paid'
+        GROUP BY MONTH(payment_date), MONTHNAME(payment_date)
+        ORDER BY month_num ASC
+      `, [year]);
+      
+      // Get total properties
+      const [totalProps] = await pool.query(`SELECT COUNT(*) as count FROM properties`);
+      
+      // Get total revenue
+      const [totalRev] = await pool.query(`
+        SELECT COALESCE(SUM(amount), 0) as total 
+        FROM payments 
+        WHERE YEAR(payment_date) = ? AND status = 'paid'
+      `, [year]);
+      
+      // Get active rentals
+      const [activeRentals] = await pool.query(`
+        SELECT COUNT(*) as count FROM rentals WHERE status = 'active'
+      `);
+      
+      // Get top properties
+      const [topProperties] = await pool.query(`
+        SELECT 
+          p.title,
+          COALESCE(SUM(pay.amount), 0) as revenue
+        FROM properties p
+        LEFT JOIN rentals r ON p.id = r.property_id
+        LEFT JOIN payments pay ON r.id = pay.rental_id AND pay.status = 'paid'
+        GROUP BY p.id
+        ORDER BY revenue DESC
+        LIMIT 5
+      `);
+      
+      reportData = {
+        total_properties: totalProps[0].count,
+        total_revenue: totalRev[0].total,
+        total_rentals: activeRentals[0].count,
+        monthly_data: monthlyData,
+        top_properties: topProperties
+      };
+    } else if (type === 'yearly') {
+      // Get yearly breakdown
+      const [yearlyData] = await pool.query(`
+        SELECT 
+          YEAR(payment_date) as year,
+          COUNT(*) as payment_count,
+          COALESCE(SUM(amount), 0) as revenue
+        FROM payments
+        WHERE status = 'paid'
+        GROUP BY YEAR(payment_date)
+        ORDER BY year DESC
+      `);
+      
+      reportData = {
+        yearly_data: yearlyData
+      };
+    } else if (type === 'property') {
+      // Get property performance
+      const [propertyData] = await pool.query(`
+        SELECT 
+          p.id,
+          p.title,
+          p.status,
+          COUNT(DISTINCT r.id) as rental_count,
+          COALESCE(SUM(pay.amount), 0) as total_revenue,
+          COALESCE(AVG(pay.amount), 0) as avg_payment
+        FROM properties p
+        LEFT JOIN rentals r ON p.id = r.property_id
+        LEFT JOIN payments pay ON r.id = pay.rental_id AND pay.status = 'paid'
+        GROUP BY p.id
+        ORDER BY total_revenue DESC
+      `);
+      
+      reportData = {
+        property_data: propertyData
+      };
+    }
+    
+    res.json(reportData);
+  } catch (error) {
+    console.error('Error generating report:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// GET /api/admin/settings - Get system settings
+export const getSettings = async (req, res) => {
+  try {
+    // You can store settings in a separate table or return defaults
+    const settings = {
+      maintenance_mode: false,
+      require_approval: true,
+      max_rental_days: 365,
+      default_rental_fee: 0,
+      notification_email: 'admin@smartrental.com',
+      admin_email: 'admin@smartrental.com',
+      platform_name: 'Smart Rental RW',
+      platform_version: '1.0.0'
+    };
+    
+    res.json(settings);
+  } catch (error) {
+    console.error('Error getting settings:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// PUT /api/admin/settings - Update system settings (optional)
+export const updateSettings = async (req, res) => {
+  try {
+    const settings = req.body;
+    // Here you would save to a settings table
+    // For now, just return success
+    res.json({ message: 'Settings saved successfully', settings });
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};

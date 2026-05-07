@@ -1,7 +1,8 @@
 import express from 'express'
 import {
   getPlatformStats, getAllUsers, getUserById, changeUserRole, deleteUser,
-  getAllProperties, deleteProperty, getAllRentals, getAllPayments, getAllRequests
+  getAllProperties, deleteProperty, getAllRentals, getAllPayments, getAllRequests,
+  getReports, getSettings, updateSettings
 } from '../controllers/adminController.js'
 import { protect, allowRoles } from '../middleware/authMiddleware.js'
 
@@ -187,5 +188,78 @@ router.get('/payments', getAllPayments)
  *         description: List of all requests
  */
 router.get('/requests', getAllRequests)
+
+/**
+ * @swagger
+ * /api/admin/reports:
+ *   get:
+ *     summary: Generate platform reports
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [monthly, yearly, property]
+ *         example: monthly
+ *       - in: query
+ *         name: year
+ *         schema:
+ *           type: integer
+ *         example: 2026
+ *     responses:
+ *       200:
+ *         description: Report data
+ */
+router.get('/reports', getReports)
+
+/**
+ * @swagger
+ * /api/admin/settings:
+ *   get:
+ *     summary: Get system settings
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: System settings
+ */
+router.get('/settings', getSettings)
+
+/**
+ * @swagger
+ * /api/admin/settings:
+ *   put:
+ *     summary: Update system settings
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               maintenance_mode:
+ *                 type: boolean
+ *               require_approval:
+ *                 type: boolean
+ *               max_rental_days:
+ *                 type: integer
+ *               default_rental_fee:
+ *                 type: integer
+ *               notification_email:
+ *                 type: string
+ *               admin_email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Settings updated
+ */
+router.put('/settings', updateSettings)
 
 export default router

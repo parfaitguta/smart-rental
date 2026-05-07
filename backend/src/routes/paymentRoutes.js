@@ -1,7 +1,8 @@
 import express from 'express'
 import {
   recordPayment, rentalPayments, landlordPayments,
-  tenantPayments, paymentSummary, monthlyReport, updateStatus
+  tenantPayments, paymentSummary, monthlyReport, updateStatus,
+  renterMakePayment
 } from '../controllers/paymentController.js'
 import { protect, allowRoles } from '../middleware/authMiddleware.js'
 import pool from '../config/db.js'
@@ -51,10 +52,40 @@ const router = express.Router()
  *     responses:
  *       201:
  *         description: Payment recorded
- *       400:
- *         description: Validation error
  */
 router.post('/', protect, allowRoles('landlord', 'admin'), recordPayment)
+
+/**
+ * @swagger
+ * /api/payments/renter-pay:
+ *   post:
+ *     summary: Make a payment as renter
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rental_id
+ *               - amount
+ *             properties:
+ *               rental_id:
+ *                 type: integer
+ *               amount:
+ *                 type: number
+ *               month_year:
+ *                 type: string
+ *               payment_method:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Payment successful
+ */
+router.post('/renter-pay', protect, allowRoles('renter'), renterMakePayment)
 
 /**
  * @swagger
@@ -108,7 +139,7 @@ router.get('/landlord', protect, allowRoles('landlord', 'admin'), landlordPaymen
  * @swagger
  * /api/payments/rental-summary:
  *   get:
- *     summary: Get rental payment summary with remaining balances (landlord only)
+ *     summary: Get rental payment summary with remaining balances
  *     tags: [Payments]
  *     security:
  *       - bearerAuth: []
@@ -119,7 +150,7 @@ router.get('/landlord', protect, allowRoles('landlord', 'admin'), landlordPaymen
 router.get('/rental-summary', protect, allowRoles('landlord', 'admin'), async (req, res) => {
   try {
     const [rentals] = await pool.query(
-      `SELECT 
+      `SELECT
         r.id as rental_id,
         p.title as property_title,
         u.full_name as tenant_name,
@@ -135,7 +166,7 @@ router.get('/rental-summary', protect, allowRoles('landlord', 'admin'), async (r
        ORDER BY remaining_balance DESC`,
       [req.user.id]
     )
-    
+
     res.json({ rentals: rentals })
   } catch (error) {
     console.error('Error getting rental summary:', error)

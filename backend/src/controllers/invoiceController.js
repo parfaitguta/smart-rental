@@ -17,6 +17,16 @@ export const createNewInvoice = async (req, res) => {
       return res.status(400).json({ message: 'rental_id, amount, month_year and due_date are required' })
     }
 
+    // Check if invoice already exists for this month
+    const [existing] = await pool.query(
+      `SELECT id, status FROM invoices WHERE rental_id = ? AND month_year = ? AND status NOT IN ('cancelled', 'paid')`,
+      [rental_id, month_year]
+    )
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ message: 'Invoice already exists for this month' });
+    }
+
     const [rentals] = await pool.query(
       `SELECT r.*, p.landlord_id, r.tenant_id, p.title as property_title
        FROM rentals r
@@ -55,6 +65,7 @@ export const createNewInvoice = async (req, res) => {
     
     res.status(201).json({ message: 'Invoice created successfully', invoice })
   } catch (error) {
+    console.error('Error creating invoice:', error);
     res.status(500).json({ message: 'Server error', error: error.message })
   }
 }
@@ -96,6 +107,79 @@ export const getInvoice = async (req, res) => {
   }
 }
 
+// GET /api/invoices/:id/status — Check invoice status
+export const getInvoiceStatus = async (req, res) => {
+  try {
+    const invoice = await getInvoiceById(req.params.id);
+    
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+    
+    if (invoice.tenant_id !== req.user.id && invoice.landlord_id !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+    
+    res.json({
+      id: invoice.id,
+      status: invoice.status,
+      can_pay: invoice.status === 'unpaid' || invoice.status === 'partial',
+      can_cancel: (invoice.status === 'unpaid' || invoice.status === 'partial'),
+      message: invoice.status === 'cancelled' ? 'Invoice has been cancelled' : null
+    });
+  } catch (error) {
+    console.error('Error checking invoice status:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+}
+
+// PUT /api/invoices/:id/cancel — Cancel an invoice
+export const cancelInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    // Get invoice details
+    const invoice = await getInvoiceById(id);
+    
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+    
+    // Check authorization (tenant or landlord can cancel)
+    if (invoice.tenant_id !== userId && invoice.landlord_id !== userId) {
+      return res.status(403).json({ message: 'Not authorized to cancel this invoice' });
+    }
+    
+    // Check if invoice can be cancelled (only unpaid or partial)
+    if (invoice.status === 'paid') {
+      return res.status(400).json({ message: 'Cannot cancel a paid invoice' });
+    }
+    
+    if (invoice.status === 'cancelled') {
+      return res.status(400).json({ message: 'Invoice is already cancelled' });
+    }
+    
+    // Update invoice status to cancelled
+    await pool.query(
+      `UPDATE invoices SET status = 'cancelled', updated_at = NOW() WHERE id = ?`,
+      [id]
+    );
+    
+    await logActivity(userId, 'INVOICE_CANCELLED', `Cancelled invoice for ${invoice.month_year}`, 'invoice', id, req.ip);
+    
+    res.json({ 
+      success: true, 
+      message: 'Invoice cancelled successfully',
+      invoice_id: id
+    });
+  } catch (error) {
+    console.error('Error cancelling invoice:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 // POST /api/invoices/:id/pay — tenant initiates payment (REAL PAYMENTS)
 export const payInvoice = async (req, res) => {
   try {
@@ -112,6 +196,12 @@ export const payInvoice = async (req, res) => {
     if (invoice.tenant_id !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized' })
     }
+    
+    // Check if invoice is cancelled
+    if (invoice.status === 'cancelled') {
+      return res.status(400).json({ message: 'Invoice has been cancelled' })
+    }
+    
     if (invoice.status === 'paid') {
       return res.status(400).json({ message: 'Invoice is already fully paid' })
     }
@@ -430,6 +520,7 @@ export const getRentalPaymentHistory = async (req, res) => {
         SUM(CASE WHEN i.status = 'paid' THEN 1 ELSE 0 END) as paid_months,
         SUM(CASE WHEN i.status = 'partial' THEN 1 ELSE 0 END) as partial_months,
         SUM(CASE WHEN i.status = 'unpaid' THEN 1 ELSE 0 END) as unpaid_months,
+        SUM(CASE WHEN i.status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_months,
         SUM(i.amount) as total_expected,
         COALESCE(SUM(ip.amount), 0) as total_paid,
         SUM(i.amount) - COALESCE(SUM(ip.amount), 0) as total_remaining
@@ -465,6 +556,7 @@ export const getRentalPaymentHistory = async (req, res) => {
         paid_months: summary[0].paid_months || 0,
         partial_months: summary[0].partial_months || 0,
         unpaid_months: summary[0].unpaid_months || 0,
+        cancelled_months: summary[0].cancelled_months || 0,
         total_expected: parseFloat(summary[0].total_expected || 0),
         total_paid: parseFloat(summary[0].total_paid || 0),
         total_remaining: parseFloat(summary[0].total_remaining || 0)
@@ -609,6 +701,7 @@ export const getCurrentMonthStatus = async (req, res) => {
     }
 
     const invoice = result[0]
+    
     res.json({
       has_invoice: true,
       invoice_id: invoice.id,
@@ -621,6 +714,7 @@ export const getCurrentMonthStatus = async (req, res) => {
       is_paid: invoice.status === 'paid',
       is_partial: invoice.status === 'partial',
       is_unpaid: invoice.status === 'unpaid',
+      is_cancelled: invoice.status === 'cancelled',
       payment_percentage: (parseFloat(invoice.total_paid) / parseFloat(invoice.amount)) * 100
     })
   } catch (error) {

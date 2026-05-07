@@ -41,6 +41,60 @@ export const recordPayment = async (req, res) => {
   }
 }
 
+export const renterMakePayment = async (req, res) => {
+  try {
+    const { rental_id, amount, month_year, payment_method } = req.body
+    const tenantId = req.user.id
+
+    if (!rental_id || !amount) {
+      return res.status(400).json({ message: 'rental_id and amount are required' })
+    }
+
+    // Verify rental belongs to this tenant
+    const rental = await getRentalById(rental_id)
+    if (!rental) {
+      return res.status(404).json({ message: 'Rental not found' })
+    }
+    if (rental.tenant_id !== tenantId) {
+      return res.status(403).json({ message: 'Not authorized to pay for this rental' })
+    }
+    if (rental.status !== 'active') {
+      return res.status(400).json({ message: 'Cannot pay for an inactive rental' })
+    }
+
+    // Create payment
+    const paymentDate = new Date().toISOString().split('T')[0]
+    const paymentId = await createPayment({
+      rental_id,
+      amount,
+      payment_date: paymentDate,
+      method: payment_method || 'mobile_money',
+      status: 'paid',
+      notes: `Payment for ${month_year || new Date().toLocaleDateString()}`
+    })
+
+    const payment = await getPaymentById(paymentId)
+
+    // Notify landlord
+    try {
+      const landlordId = rental.landlord_id
+      await NOTIF.paymentReceived(landlordId, amount, rental.property_title, rental.tenant_name)
+    } catch (notifErr) {
+      console.error('Notification failed:', notifErr.message)
+    }
+
+    res.status(201).json({
+      success: true,
+      id: paymentId,
+      message: 'Payment successful',
+      payment
+    })
+  } catch (error) {
+    console.error('Payment error:', error)
+    res.status(500).json({ message: 'Server error', error: error.message })
+  }
+}
+
 export const rentalPayments = async (req, res) => {
   try {
     const rental = await getRentalById(req.params.rental_id)
