@@ -35,7 +35,7 @@ import receiptRoutes from './routes/receiptRoutes.js'
 import leaseRoutes from './routes/leaseRoutes.js'
 import { setupSwagger } from './config/swagger.js'
 import invoiceRoutes from './routes/invoiceRoutes.js'
-import activityRoutes from './routes/activityRoutes.js'  // ADD THIS LINE
+import activityRoutes from './routes/activityRoutes.js'
 
 setupSwagger(app)
 
@@ -55,7 +55,7 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/reviews', reviewRoutes)
 app.use('/api/receipts', receiptRoutes)
 app.use('/api/lease', leaseRoutes)
-app.use('/api/activities', activityRoutes)  // ADD THIS LINE
+app.use('/api/activities', activityRoutes)
 
 app.get('/', async (req, res) => {
   try {
@@ -66,6 +66,7 @@ app.get('/', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
+// CRITICAL: Bind to 0.0.0.0 for Render
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`)
 })
