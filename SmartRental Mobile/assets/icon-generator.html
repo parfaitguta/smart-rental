@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Convert SVG to PNG</title>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 20px; background: #f0f0f0; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        canvas { border: 1px solid #ddd; margin: 10px; background: white; }
+        button { margin: 10px; padding: 10px 20px; background: #2563EB; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #1d4ed8; }
+        .success { color: green; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Rental - Icon Generator</h1>
+        <p>Click the buttons below to download your app icons</p>
+        
+        <div>
+            <canvas id="iconCanvas" width="1024" height="1024" style="width: 256px; height: 256px;"></canvas>
+            <br>
+            <button onclick="downloadIcon()">📱 Download App Icon (icon.png)</button>
+            <button onclick="downloadAdaptive()">🔄 Download Adaptive Icon</button>
+        </div>
+        
+        <div>
+            <canvas id="splashCanvas" width="1242" height="2436" style="width: 200px; height: 400px;"></canvas>
+            <br>
+            <button onclick="downloadSplash()">📲 Download Splash Screen (splash.png)</button>
+        </div>
+        
+        <div id="message"></div>
+        
+        <hr>
+        <h3>Instructions:</h3>
+        <ol style="text-align: left;">
+            <li>Click each button to download the PNG files</li>
+            <li>Save them in the <code>assets</code> folder of your project</li>
+            <li>Run <code>npx expo prebuild --clean</code></li>
+            <li>Rebuild your app</li>
+        </ol>
+    </div>
+    
+    <script>
+        // Load SVG and draw on canvas
+        async function loadSVG(url, canvas) {
+            const svgText = await fetch(url).then(res => res.text());
+            const img = new Image();
+            const svgBlob = new Blob([svgText], {type: 'image/svg+xml'});
+            const svgUrl = URL.createObjectURL(svgBlob);
+            
+            return new Promise((resolve) => {
+                img.onload = () => {
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    URL.revokeObjectURL(svgUrl);
+                    resolve();
+                };
+                img.src = svgUrl;
+            });
+        }
+        
+        // Load icons
+        const iconCanvas = document.getElementById('iconCanvas');
+        const splashCanvas = document.getElementById('splashCanvas');
+        
+        loadSVG('icon.svg', iconCanvas).then(() => console.log('Icon loaded'));
+        loadSVG('splash.svg', splashCanvas).then(() => console.log('Splash loaded'));
+        
+        function downloadIcon() {
+            const link = document.createElement('a');
+            link.download = 'icon.png';
+            link.href = iconCanvas.toDataURL('image/png');
+            link.click();
+            showMessage('✅ icon.png downloaded! Save it to assets/ folder', 'success');
+        }
+        
+        function downloadAdaptive() {
+            // Create a 1024x1024 version for adaptive icon
+            const adaptiveCanvas = document.createElement('canvas');
+            adaptiveCanvas.width = 1024;
+            adaptiveCanvas.height = 1024;
+            const ctx = adaptiveCanvas.getContext('2d');
+            ctx.drawImage(iconCanvas, 0, 0, 1024, 1024);
+            const link = document.createElement('a');
+            link.download = 'adaptive-icon.png';
+            link.href = adaptiveCanvas.toDataURL('image/png');
+            link.click();
+            showMessage('✅ adaptive-icon.png downloaded! Save it to assets/ folder', 'success');
+        }
+        
+        function downloadSplash() {
+            const link = document.createElement('a');
+            link.download = 'splash.png';
+            link.href = splashCanvas.toDataURL('image/png');
+            link.click();
+            showMessage('✅ splash.png downloaded! Save it to assets/ folder', 'success');
+        }
+        
+        function showMessage(msg, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.innerHTML = `<p class="${type}">${msg}</p>`;
+            setTimeout(() => { msgDiv.innerHTML = ''; }, 5000);
+        }
+    </script>
+</body>
+</html>

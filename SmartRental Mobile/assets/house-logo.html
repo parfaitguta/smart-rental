@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>House Logo Generator</title>
+    <style>
+        body {
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            margin: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            background: #2563EB;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .styles {
+            margin: 10px;
+        }
+        .style-btn {
+            background: #6B7280;
+            margin: 5px;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        .style-btn.active {
+            background: #2563EB;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🏠 House Logo Maker</h2>
+        
+        <div class="styles">
+            <button class="style-btn" onclick="drawStyle1()">🏠 Modern House</button>
+            <button class="style-btn" onclick="drawStyle2()">🏡 Cottage House</button>
+            <button class="style-btn" onclick="drawStyle3()">🔑 House with Key</button>
+            <button class="style-btn" onclick="drawStyle4()">⭐ Premium House</button>
+        </div>
+        
+        <canvas id="logoCanvas" width="512" height="512"></canvas>
+        <br>
+        <button onclick="downloadIcon()">📱 Download App Icon (512x512)</button>
+        <button onclick="downloadAdaptive()">🔄 Download Adaptive Icon</button>
+        <button onclick="downloadSplash()">📲 Download Splash Screen</button>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('logoCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        function drawStyle1() {
+            ctx.fillStyle = '#2563EB';
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // Modern house
+            ctx.fillStyle = 'white';
+            ctx.fillRect(130, 230, 252, 180);
+            
+            // Roof
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.moveTo(256, 70);
+            ctx.lineTo(90, 230);
+            ctx.lineTo(422, 230);
+            ctx.fill();
+            
+            // Door
+            ctx.fillStyle = '#2563EB';
+            ctx.fillRect(215, 320, 82, 90);
+            
+            // Door knob
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.arc(282, 365, 7, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Windows
+            ctx.fillStyle = '#F59E0B';
+            ctx.fillRect(155, 260, 45, 45);
+            ctx.fillRect(312, 260, 45, 45);
+            
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 36px Arial';
+            ctx.fillText('SR', 230, 480);
+            
+            showMessage('✅ Modern House style selected', 'success');
+        }
+        
+        function drawStyle2() {
+            ctx.fillStyle = '#2563EB';
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // Cottage house
+            ctx.fillStyle = 'white';
+            ctx.fillRect(120, 240, 272, 170);
+            
+            // Triangular roof
+            ctx.fillStyle = '#DC2626';
+            ctx.beginPath();
+            ctx.moveTo(256, 60);
+            ctx.lineTo(80, 240);
+            ctx.lineTo(432, 240);
+            ctx.fill();
+            
+            // Chimney
+            ctx.fillStyle = '#9CA3AF';
+            ctx.fillRect(340, 100, 40, 80);
+            
+            // Door
+            ctx.fillStyle = '#2563EB';
+            ctx.fillRect(220, 310, 72, 100);
+            
+            // Windows
+            ctx.fillStyle = '#F59E0B';
+            ctx.fillRect(155, 275, 40, 40);
+            ctx.fillRect(317, 275, 40, 40);
+            
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 36px Arial';
+            ctx.fillText('SR', 230, 480);
+            
+            showMessage('✅ Cottage House style selected', 'success');
+        }
+        
+        function drawStyle3() {
+            ctx.fillStyle = '#2563EB';
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // House with key
+            ctx.fillStyle = 'white';
+            ctx.fillRect(140, 220, 232, 180);
+            
+            // Roof
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.moveTo(256, 80);
+            ctx.lineTo(100, 220);
+            ctx.lineTo(412, 220);
+            ctx.fill();
+            
+            // Door
+            ctx.fillStyle = '#2563EB';
+            ctx.fillRect(220, 310, 72, 90);
+            
+            // Key
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.arc(340, 350, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillRect(350, 345, 40, 10);
+            ctx.fillRect(380, 340, 20, 20);
+            
+            // Windows
+            ctx.fillStyle = '#F59E0B';
+            ctx.fillRect(165, 250, 45, 45);
+            ctx.fillRect(302, 250, 45, 45);
+            
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 36px Arial';
+            ctx.fillText('SR', 230, 480);
+            
+            showMessage('✅ House with Key style selected', 'success');
+        }
+        
+        function drawStyle4() {
+            ctx.fillStyle = '#2563EB';
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // Premium house
+            ctx.fillStyle = 'white';
+            ctx.fillRect(120, 230, 272, 180);
+            
+            // Premium roof
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.moveTo(256, 50);
+            ctx.lineTo(70, 230);
+            ctx.lineTo(442, 230);
+            ctx.fill();
+            
+            // Star
+            ctx.fillStyle = '#FEF08A';
+            drawStar(ctx, 256, 140, 30, 15, 5);
+            
+            // Double door
+            ctx.fillStyle = '#2563EB';
+            ctx.fillRect(210, 320, 35, 90);
+            ctx.fillRect(267, 320, 35, 90);
+            
+            // Windows
+            ctx.fillStyle = '#F59E0B';
+            ctx.fillRect(150, 265, 40, 40);
+            ctx.fillRect(322, 265, 40, 40);
+            
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 36px Arial';
+            ctx.fillText('SR', 230, 480);
+            
+            showMessage('✅ Premium House style selected', 'success');
+        }
+        
+        function drawStar(ctx, cx, cy, outerR, innerR, points) {
+            let rot = Math.PI / 2 * 3;
+            let step = Math.PI / points;
+            ctx.beginPath();
+            for (let i = 0; i < points; i++) {
+                let x = cx + Math.cos(rot) * outerR;
+                let y = cy + Math.sin(rot) * outerR;
+                ctx.lineTo(x, y);
+                rot += step;
+                x = cx + Math.cos(rot) * innerR;
+                y = cy + Math.sin(rot) * innerR;
+                ctx.lineTo(x, y);
+                rot += step;
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Default style
+        drawStyle1();
+        
+        function downloadIcon() {
+            const link = document.createElement('a');
+            link.download = 'icon.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showMessage('✅ icon.png downloaded!', 'success');
+        }
+        
+        function downloadAdaptive() {
+            const adaptiveCanvas = document.createElement('canvas');
+            adaptiveCanvas.width = 1024;
+            adaptiveCanvas.height = 1024;
+            const actx = adaptiveCanvas.getContext('2d');
+            actx.drawImage(canvas, 256, 256, 512, 512);
+            const link = document.createElement('a');
+            link.download = 'adaptive-icon.png';
+            link.href = adaptiveCanvas.toDataURL('image/png');
+            link.click();
+            showMessage('✅ adaptive-icon.png downloaded!', 'success');
+        }
+        
+        function downloadSplash() {
+            const splashCanvas = document.createElement('canvas');
+            splashCanvas.width = 1242;
+            splashCanvas.height = 2436;
+            const sctx = splashCanvas.getContext('2d');
+            
+            sctx.fillStyle = '#2563EB';
+            sctx.fillRect(0, 0, 1242, 2436);
+            sctx.drawImage(canvas, 365, 800, 512, 512);
+            sctx.fillStyle = 'white';
+            sctx.font = 'bold 60px Arial';
+            sctx.fillText('Smart Rental', 400, 1450);
+            
+            const link = document.createElement('a');
+            link.download = 'splash.png';
+            link.href = splashCanvas.toDataURL('image/png');
+            link.click();
+            showMessage('✅ splash.png downloaded!', 'success');
+        }
+        
+        function showMessage(msg, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.innerHTML = `<p style="color:green">${msg}</p>`;
+            setTimeout(() => { msgDiv.innerHTML = ''; }, 3000);
+        }
+    </script>
+</body>
+</html>
