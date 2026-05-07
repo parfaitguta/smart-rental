@@ -22,6 +22,12 @@
     "recharts": "^3.8.1",
     "web-vitals": "^2.1.4"
   },
+  "overrides": {
+    "typescript": "^4.9.5"
+  },
+  "resolutions": {
+    "typescript": "^4.9.5"
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
