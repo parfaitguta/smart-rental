@@ -22,6 +22,10 @@ const statusIcons = {
   cancelled: <X size={14} className="text-gray-500" />
 }
 
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export default function MyInvoices() {
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [selectedRentalForHistory, setSelectedRentalForHistory] = useState(null)
@@ -98,10 +102,9 @@ export default function MyInvoices() {
     }
   }
 
-  // NEW: Cancel Invoice Handler
   const handleCancelInvoice = async () => {
     if (!selectedInvoice) return
-    
+
     if (!window.confirm(`Are you sure you want to cancel this invoice for ${selectedInvoice.month_year}?\n\nThis action cannot be undone.`)) {
       return
     }
@@ -109,7 +112,7 @@ export default function MyInvoices() {
     setCancelling(true)
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`http://localhost:5000/api/invoices/${selectedInvoice.id}/cancel`, {
+      const response = await fetch(`${API_BASE_URL}/invoices/${selectedInvoice.id}/cancel`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -136,12 +139,11 @@ export default function MyInvoices() {
 
   const handlePay = async (e) => {
     e.preventDefault()
-    
-    // REAL PAYMENT WARNING - Confirmation dialog
-    if (!window.confirm(`⚠️ REAL PAYMENT WARNING ⚠️\n\nYou are about to pay ${formatCurrency(payForm.amount)} from your mobile money account.\n\n❗ This amount will be DEDUCTED from your real mobile money balance.\n\n✅ Click OK to proceed with the payment\n❌ Click Cancel to abort\n\nMake sure you have sufficient funds in your mobile money account.`)) {
+
+    if (!window.confirm(`⚠️ REAL PAYMENT WARNING ⚠️\n\nYou are about to pay ${formatCurrency(payForm.amount)} from your mobile money account.\n\n❌ This amount will be DEDUCTED from your real mobile money balance.\n\n✓ Click OK to proceed with the payment\n❌ Click Cancel to abort\n\nMake sure you have sufficient funds in your mobile money account.`)) {
       return
     }
-    
+
     setPaying(true)
     try {
       const res = await payInvoice(selectedInvoice.id, payForm)
@@ -178,7 +180,6 @@ export default function MyInvoices() {
     }
   }
 
-  // Helper to check if invoice can be cancelled
   const canCancelInvoice = (invoice) => {
     return invoice.status !== 'paid' && invoice.status !== 'cancelled'
   }
@@ -187,7 +188,6 @@ export default function MyInvoices() {
 
   return (
     <div className="flex gap-6">
-      {/* Left Panel — Invoice List */}
       <div className="w-80 shrink-0">
         <div className="flex justify-between items-center mb-4">
           <div>
@@ -217,7 +217,6 @@ export default function MyInvoices() {
           </div>
         </div>
 
-        {/* Create Invoice Form */}
         {showCreateForm && (
           <div className="bg-white rounded-xl shadow-sm p-4 mb-4 border-l-4 border-blue-500">
             <div className="flex justify-between items-center mb-3">
@@ -313,7 +312,6 @@ export default function MyInvoices() {
           </div>
         )}
 
-        {/* Invoice List */}
         {invoices.length === 0 ? (
           <div className="bg-white rounded-xl p-8 text-center shadow-sm">
             <CreditCard size={32} className="text-gray-200 mx-auto mb-2" />
@@ -355,7 +353,6 @@ export default function MyInvoices() {
                     </span>
                   )}
                 </div>
-                {/* Mini progress bar */}
                 <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
                   <div
                     className={`h-1.5 rounded-full ${inv.status === 'cancelled' ? 'bg-gray-400' : 'bg-green-500'}`}
@@ -371,7 +368,6 @@ export default function MyInvoices() {
         )}
       </div>
 
-      {/* Right Panel — Invoice Detail */}
       <div className="flex-1">
         {!selectedInvoice ? (
           <div className="bg-white rounded-xl p-12 text-center shadow-sm h-64 flex flex-col items-center justify-center">
@@ -382,7 +378,6 @@ export default function MyInvoices() {
           <Spinner size="lg" />
         ) : (
           <div>
-            {/* Invoice Header */}
             <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -408,7 +403,6 @@ export default function MyInvoices() {
                 </span>
               </div>
 
-              {/* Amount Cards */}
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div className="bg-gray-50 rounded-xl p-4 text-center">
                   <p className="text-xs text-gray-400 mb-1">Total Amount</p>
@@ -434,7 +428,6 @@ export default function MyInvoices() {
                 </div>
               </div>
 
-              {/* Progress Bar */}
               {invoiceDetail.invoice.status !== 'cancelled' && (
                 <div className="mb-4">
                   <div className="flex justify-between text-xs text-gray-500 mb-1">
@@ -463,7 +456,6 @@ export default function MyInvoices() {
                 </p>
               )}
 
-              {/* Cancel Button - Show if not paid and not cancelled */}
               {canCancelInvoice(invoiceDetail.invoice) && (
                 <div className="mt-4">
                   <button
@@ -477,7 +469,6 @@ export default function MyInvoices() {
                 </div>
               )}
 
-              {/* Pay Section - Only show if not paid and not cancelled */}
               {parseFloat(invoiceDetail.invoice.remaining) > 0 && invoiceDetail.invoice.status !== 'cancelled' && (
                 <div className="mt-4">
                   {lastPaymentId && (
@@ -509,8 +500,7 @@ export default function MyInvoices() {
                     <form onSubmit={handlePay}
                       className="mt-4 bg-blue-50 rounded-xl p-4 border border-blue-200 space-y-3">
                       <h4 className="font-semibold text-gray-700">Enter Payment Details</h4>
-                      
-                      {/* Real Payment Warning */}
+
                       <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-2">
                         <p className="text-red-700 text-xs font-medium flex items-center gap-1">
                           <AlertCircle size={12} /> REAL PAYMENT
@@ -604,7 +594,6 @@ export default function MyInvoices() {
                 </div>
               )}
 
-              {/* Paid / Cancelled Status Messages */}
               {invoiceDetail.invoice.status === 'paid' && (
                 <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                   <CheckCircle size={28} className="text-green-500 mx-auto mb-1" />
@@ -620,7 +609,6 @@ export default function MyInvoices() {
               )}
             </div>
 
-            {/* Payment History */}
             {invoiceDetail.payments.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-5">
                 <h3 className="font-semibold text-gray-700 mb-3">Payment History</h3>
@@ -661,7 +649,6 @@ export default function MyInvoices() {
         )}
       </div>
 
-      {/* Payment History Modal */}
       {showHistoryModal && (
         <PaymentHistoryModal
           rental={selectedRentalForHistory}

@@ -5,6 +5,10 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import { ShieldCheck, RefreshCw } from 'lucide-react'
 
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export default function VerifyOTP() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
@@ -58,7 +62,7 @@ export default function VerifyOTP() {
     }
     setLoading(true)
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/verify-otp', {
+      const res = await axios.post(`${API_BASE_URL}/auth/verify-otp`, {
         email, otp: otpCode
       })
       login(res.data.token, res.data.user)
@@ -79,7 +83,7 @@ export default function VerifyOTP() {
   const handleResend = async () => {
     setResending(true)
     try {
-      await axios.post('http://localhost:5000/api/auth/resend-otp', { email })
+      await axios.post(`${API_BASE_URL}/auth/resend-otp`, { email })
       toast.success('New OTP sent to your email!')
       setCountdown(60)
       setOtp(['', '', '', '', '', ''])

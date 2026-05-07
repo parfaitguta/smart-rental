@@ -4,6 +4,10 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import { Home, Lock, Eye, EyeOff } from 'lucide-react'
 
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export default function ResetPassword() {
   const { token } = useParams()
   const navigate = useNavigate()
@@ -24,7 +28,7 @@ export default function ResetPassword() {
     }
     setLoading(true)
     try {
-      await axios.post(`http://localhost:5000/api/auth/reset-password/${token}`, { password })
+      await axios.post(`${API_BASE_URL}/auth/reset-password/${token}`, { password })
       toast.success('Password reset successfully!')
       navigate('/login')
     } catch (err) {

@@ -1,6 +1,10 @@
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export const downloadLease = async (rentalId) => {
   const token = localStorage.getItem('token')
-  const response = await fetch(`http://localhost:5000/api/lease/${rentalId}`, {
+  const response = await fetch(`${API_BASE_URL}/lease/${rentalId}`, {
     headers: { Authorization: `Bearer ${token}` }
   })
   if (!response.ok) throw new Error('Failed to generate lease')

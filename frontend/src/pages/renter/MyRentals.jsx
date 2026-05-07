@@ -10,6 +10,10 @@ import { MapPin, Calendar, CreditCard, AlertCircle, Download, FileText, MessageS
 import { formatDate, formatCurrency, getStatusColor } from '../../utils/helpers'
 import MonthlyPaymentSelector from '../../components/common/MonthlyPaymentSelector'
 
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export default function MyRentals() {
   const navigate = useNavigate()
   const [rentals, setRentals] = useState([])
@@ -19,14 +23,14 @@ export default function MyRentals() {
   const [showCalculator, setShowCalculator] = useState(null)
 
   const messageLandlord = (landlordId, landlordName, propertyTitle) => {
-    navigate('/messages', { 
-      state: { 
-        startChat: true, 
-        userId: landlordId, 
+    navigate('/messages', {
+      state: {
+        startChat: true,
+        userId: landlordId,
         userName: landlordName,
         propertyTitle: propertyTitle,
         userRole: 'landlord'
-      } 
+      }
     })
   }
 
@@ -53,7 +57,7 @@ export default function MyRentals() {
   const handleDownloadReceipt = async (paymentId) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`http://localhost:5000/api/receipts/${paymentId}`, {
+      const response = await fetch(`${API_BASE_URL}/receipts/${paymentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (!response.ok) {
@@ -142,7 +146,6 @@ export default function MyRentals() {
                 </span>
               </div>
 
-              {/* Payment Requests from Landlord */}
               {paymentRequests.filter(pr => pr.rental_id === r.id).length > 0 && (
                 <div className="border-t pt-3 mb-3">
                   <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
@@ -179,7 +182,6 @@ export default function MyRentals() {
                 </div>
               )}
 
-              {/* Payment History */}
               <div className="border-t pt-3">
                 <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                   <CreditCard size={14} /> Payment History
@@ -211,7 +213,6 @@ export default function MyRentals() {
                 )}
               </div>
 
-              {/* Monthly Payment Selector */}
               {showCalculator === r.id && (
                 <div className="mt-4 border-t pt-4">
                   <MonthlyPaymentSelector rentalId={r.id} userRole="renter" />

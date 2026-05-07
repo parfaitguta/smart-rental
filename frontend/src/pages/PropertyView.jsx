@@ -5,7 +5,7 @@ import { getPropertyImages } from '../api/imageApi'
 import { MapPin, Phone, ArrowLeft, LogIn, Building2 } from 'lucide-react'
 import { formatCurrency, getStatusColor } from '../utils/helpers'
 
-const IMAGE_BASE = 'http://localhost:5000'
+const IMAGE_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000'
 
 export default function PropertyView() {
   const { id } = useParams()
@@ -37,7 +37,6 @@ export default function PropertyView() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
       <nav className="bg-blue-700 text-white px-6 py-4 flex justify-between items-center shadow-md">
         <Link to="/" className="flex items-center gap-2 text-xl font-bold">
           <Building2 size={24} /> Smart Rental RW
@@ -61,7 +60,6 @@ export default function PropertyView() {
         </button>
 
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          {/* Main Image */}
           {activeImage ? (
             <img
               src={`${IMAGE_BASE}${activeImage.image_url}`}
@@ -74,7 +72,6 @@ export default function PropertyView() {
             </div>
           )}
 
-          {/* Image Thumbnails */}
           {images.length > 1 && (
             <div className="flex gap-2 p-4 overflow-x-auto">
               {images.map(img => (
@@ -124,7 +121,6 @@ export default function PropertyView() {
               </div>
             </div>
 
-            {/* CTA for non-logged in users */}
             {property.status === 'available' && (
               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 text-center">
                 <h3 className="font-bold text-gray-800 text-lg mb-2">

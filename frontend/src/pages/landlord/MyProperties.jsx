@@ -7,7 +7,7 @@ import toast from 'react-hot-toast'
 import { Plus, MapPin, Trash2, ImagePlus, Star, X } from 'lucide-react'
 import { formatCurrency, getStatusColor } from '../../utils/helpers'
 
-const IMAGE_BASE = 'http://localhost:5000'
+const IMAGE_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000'
 
 export default function MyProperties() {
   const [properties, setProperties] = useState([])
@@ -19,7 +19,6 @@ export default function MyProperties() {
     try {
       const res = await getMyProperties()
       setProperties(res.data.properties)
-      // Fetch images for each property
       const imageMap = {}
       await Promise.all(res.data.properties.map(async (p) => {
         const imgRes = await getPropertyImages(p.id)
@@ -111,7 +110,6 @@ export default function MyProperties() {
           {properties.map(p => (
             <div key={p.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
 
-              {/* Primary Image */}
               {images[p.id]?.find(i => i.is_primary) ? (
                 <img
                   src={`${IMAGE_BASE}${images[p.id].find(i => i.is_primary).image_url}`}
@@ -140,7 +138,6 @@ export default function MyProperties() {
                   {formatCurrency(p.price)}<span className="text-gray-400 text-xs font-normal">/month</span>
                 </p>
 
-                {/* Image thumbnails */}
                 {images[p.id]?.length > 0 && (
                   <div className="flex gap-2 flex-wrap mb-3">
                     {images[p.id].map(img => (

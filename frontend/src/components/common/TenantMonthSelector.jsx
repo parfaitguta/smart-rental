@@ -3,6 +3,10 @@ import axios from 'axios'
 import { Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../utils/helpers'
 
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export default function TenantMonthSelector({ rentalId, tenantName, propertyTitle, monthlyRent }) {
   const [months, setMonths] = useState([])
   const [selectedMonth, setSelectedMonth] = useState(null)
@@ -14,12 +18,12 @@ export default function TenantMonthSelector({ rentalId, tenantName, propertyTitl
     if (rentalId) {
       fetchMonthlyBreakdown()
     }
-  }, [rentalId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rentalId])
 
   const fetchMonthlyBreakdown = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get(`http://localhost:5000/api/rentals/${rentalId}/monthly-breakdown`, {
+      const response = await axios.get(`${API_BASE_URL}/rentals/${rentalId}/monthly-breakdown`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const monthsList = response.data.monthly_breakdown

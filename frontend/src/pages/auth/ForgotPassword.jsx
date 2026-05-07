@@ -4,6 +4,10 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import { Home, Mail, ArrowLeft } from 'lucide-react'
 
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -13,7 +17,7 @@ export default function ForgotPassword() {
     e.preventDefault()
     setLoading(true)
     try {
-      await axios.post('http://localhost:5000/api/auth/forgot-password', { email })
+      await axios.post(`${API_BASE_URL}/auth/forgot-password`, { email })
       setSent(true)
       toast.success('Reset link sent! Check your email.')
     } catch (err) {

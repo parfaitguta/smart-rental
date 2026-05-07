@@ -5,6 +5,10 @@ import toast from 'react-hot-toast'
 import { Plus, TrendingUp, AlertCircle, CheckCircle, Clock, Download, X } from 'lucide-react'
 import { formatCurrency, formatDate, getStatusColor } from '../../utils/helpers'
 
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export default function Payments() {
   const [payments, setPayments] = useState([])
   const [summary, setSummary] = useState(null)
@@ -66,7 +70,7 @@ export default function Payments() {
   const handleDownloadReceipt = async (paymentId) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`http://localhost:5000/api/receipts/${paymentId}`, {
+      const response = await fetch(`${API_BASE_URL}/receipts/${paymentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (!response.ok) {
@@ -111,7 +115,6 @@ export default function Payments() {
         </div>
       </div>
 
-      {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
@@ -144,7 +147,6 @@ export default function Payments() {
         </div>
       )}
 
-      {/* Monthly Report */}
       {report.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
           <h2 className="font-semibold text-gray-700 mb-3">
@@ -161,7 +163,6 @@ export default function Payments() {
         </div>
       )}
 
-      {/* Record Payment Form */}
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm p-5 mb-6 border-l-4 border-blue-500">
           <h2 className="font-semibold text-gray-700 mb-4">Record New Payment</h2>
@@ -228,7 +229,6 @@ export default function Payments() {
         </div>
       )}
 
-      {/* Payments Table */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
@@ -271,13 +271,12 @@ export default function Payments() {
                     )}
                   </div>
                 </td>
-              </tr>
+               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Full History Modal - Shows ALL payments from the table */}
       {showHistoryModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
@@ -291,7 +290,6 @@ export default function Payments() {
               </button>
             </div>
             <div className="p-6">
-              {/* Summary */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-green-50 rounded-lg p-4 text-center">
                   <p className="text-green-600 text-xs">Total Received</p>
@@ -303,7 +301,6 @@ export default function Payments() {
                 </div>
               </div>
 
-              {/* Group by Property */}
               {(() => {
                 const propertyMap = {}
                 payments.forEach(p => {
@@ -331,7 +328,6 @@ export default function Payments() {
                 )
               })()}
 
-              {/* All Payments Table */}
               {payments.length > 0 ? (
                 <div className="overflow-x-auto">
                   <h3 className="font-semibold text-gray-700 mb-3">Transaction History</h3>

@@ -5,6 +5,10 @@ import toast from 'react-hot-toast'
 import { Home, Calendar, FileText, X, User, Phone, Mail, Plus } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../utils/helpers'
 
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export default function ManageRentals() {
   const [rentals, setRentals] = useState([])
   const [loading, setLoading] = useState(true)
@@ -57,7 +61,7 @@ export default function ManageRentals() {
   const handleDownloadLease = async (rentalId) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`http://localhost:5000/api/lease/${rentalId}`, {
+      const response = await fetch(`${API_BASE_URL}/lease/${rentalId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (!response.ok) {
@@ -96,7 +100,6 @@ export default function ManageRentals() {
         </button>
       </div>
 
-      {/* Create Rental Form */}
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm p-5 mb-6 border-l-4 border-blue-500">
           <h2 className="font-semibold text-gray-700 mb-4">Create New Rental Agreement</h2>
@@ -175,7 +178,6 @@ export default function ManageRentals() {
         </div>
       )}
 
-      {/* Rentals List */}
       {rentals.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-12 text-center">
           <Home size={48} className="text-gray-200 mx-auto mb-3" />
@@ -187,7 +189,6 @@ export default function ManageRentals() {
           {rentals.map(rental => (
             <div key={rental.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <div className="p-5">
-                {/* Header */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-bold text-gray-800">{rental.property_title}</h3>
@@ -203,7 +204,6 @@ export default function ManageRentals() {
                   </span>
                 </div>
 
-                {/* Tenant Info */}
                 <div className="bg-gray-50 rounded-lg p-3 mb-4">
                   <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
                     <User size={14} /> Tenant Information
@@ -224,7 +224,6 @@ export default function ManageRentals() {
                   </div>
                 </div>
 
-                {/* Agreement Details */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
                   <div>
                     <p className="text-xs text-gray-400">Start Date</p>
@@ -245,7 +244,6 @@ export default function ManageRentals() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2 pt-3 border-t">
                   <button
                     onClick={() => handleDownloadLease(rental.id)}

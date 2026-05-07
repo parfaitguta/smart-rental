@@ -3,6 +3,10 @@ import axios from 'axios'
 import { Calendar, DollarSign, CheckCircle, Clock, AlertCircle } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../utils/helpers'
 
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export default function MonthlyPaymentSelector({ rentalId, userRole }) {
   const [months, setMonths] = useState([])
   const [selectedMonth, setSelectedMonth] = useState(null)
@@ -14,18 +18,18 @@ export default function MonthlyPaymentSelector({ rentalId, userRole }) {
     if (rentalId) {
       fetchMonthlyBreakdown()
     }
-  }, [rentalId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rentalId])
 
   const fetchMonthlyBreakdown = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get(`http://localhost:5000/api/rentals/${rentalId}/monthly-breakdown`, {
+      const response = await axios.get(`${API_BASE_URL}/rentals/${rentalId}/monthly-breakdown`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      
+
       const monthsList = response.data.monthly_breakdown
       setMonths(monthsList)
-      
+
       if (monthsList.length > 0) {
         setSelectedMonth(monthsList[monthsList.length - 1].month_year)
         setMonthData(monthsList[monthsList.length - 1])
@@ -87,14 +91,12 @@ export default function MonthlyPaymentSelector({ rentalId, userRole }) {
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 text-white">
         <h2 className="text-lg font-bold flex items-center gap-2">
           <Calendar size={20} /> Monthly Payment Status
         </h2>
       </div>
 
-      {/* Month Selector */}
       <div className="p-4 border-b bg-gray-50">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Select Month
@@ -112,10 +114,8 @@ export default function MonthlyPaymentSelector({ rentalId, userRole }) {
         </select>
       </div>
 
-      {/* Selected Month Details */}
       {monthData && (
         <div className="p-5">
-          {/* Month Title */}
           <div className="text-center mb-6">
             <h3 className="text-2xl font-bold text-gray-800">{monthData.month_name}</h3>
             <div className="inline-flex items-center gap-2 mt-2">
@@ -126,7 +126,6 @@ export default function MonthlyPaymentSelector({ rentalId, userRole }) {
             </div>
           </div>
 
-          {/* Amount Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-blue-50 rounded-lg p-4 text-center">
               <p className="text-blue-600 text-sm">Monthly Rent</p>
@@ -142,7 +141,6 @@ export default function MonthlyPaymentSelector({ rentalId, userRole }) {
             </div>
           </div>
 
-          {/* Progress Bar */}
           <div className="mb-6">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-gray-600">Payment Progress</span>
@@ -151,7 +149,7 @@ export default function MonthlyPaymentSelector({ rentalId, userRole }) {
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
-              <div 
+              <div
                 className={`h-3 rounded-full transition-all ${
                   monthData.status === 'paid' ? 'bg-green-500' :
                   monthData.status === 'partial' ? 'bg-yellow-500' :
@@ -162,7 +160,6 @@ export default function MonthlyPaymentSelector({ rentalId, userRole }) {
             </div>
           </div>
 
-          {/* Payment Details */}
           {monthData.payments.length > 0 ? (
             <div>
               <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -186,7 +183,6 @@ export default function MonthlyPaymentSelector({ rentalId, userRole }) {
             </div>
           )}
 
-          {/* Summary for All Months */}
           <div className="mt-6 pt-4 border-t">
             <h4 className="font-semibold text-gray-700 mb-3">All Months Summary</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

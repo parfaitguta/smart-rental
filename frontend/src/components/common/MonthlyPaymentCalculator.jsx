@@ -3,6 +3,10 @@ import axios from 'axios'
 import { ChevronDown, ChevronUp, Calendar, DollarSign, CheckCircle, Clock, AlertCircle } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../utils/helpers'
 
+const API_BASE_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api` 
+  : 'http://localhost:5000/api'
+
 export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -18,7 +22,7 @@ export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
   const fetchMonthlyBreakdown = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get(`http://localhost:5000/api/rentals/${rentalId}/monthly-breakdown`, {
+      const response = await axios.get(`${API_BASE_URL}/rentals/${rentalId}/monthly-breakdown`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       setData(response.data)
@@ -64,15 +68,14 @@ export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
   const { rental, summary, monthly_breakdown } = data
 
   const years = [...new Set(monthly_breakdown.map(m => m.year))]
-  const filteredMonths = selectedYear === 'all' 
-    ? monthly_breakdown 
+  const filteredMonths = selectedYear === 'all'
+    ? monthly_breakdown
     : monthly_breakdown.filter(m => m.year === parseInt(selectedYear))
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-5 text-white">
-        <h2 className="text-xl font-bold">📊 Payment Calculator</h2>
+        <h2 className="text-xl font-bold">📘 Payment Calculator</h2>
         <p className="text-blue-100 mt-1">{rental.property_title}</p>
         <p className="text-blue-200 text-sm mt-1">
           Monthly Rent: {formatCurrency(rental.monthly_rent)}
@@ -82,14 +85,13 @@ export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
         )}
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-5 bg-gray-50 border-b">
         <div className="bg-white rounded-lg p-3 text-center shadow-sm">
           <p className="text-xs text-gray-500">Total Months</p>
           <p className="text-xl font-bold text-gray-800">{summary.total_months}</p>
         </div>
         <div className="bg-green-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-green-600">✅ Paid Months</p>
+          <p className="text-xs text-green-600">✓ Paid Months</p>
           <p className="text-xl font-bold text-green-700">{summary.paid_months}</p>
         </div>
         <div className="bg-yellow-50 rounded-lg p-3 text-center">
@@ -106,7 +108,6 @@ export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
         </div>
       </div>
 
-      {/* Total Progress Bar */}
       <div className="p-5 border-b">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-gray-600">Overall Payment Progress</span>
@@ -115,7 +116,7 @@ export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-3">
-          <div 
+          <div
             className="bg-blue-600 h-3 rounded-full transition-all"
             style={{ width: `${(summary.total_paid / summary.total_rent_expected) * 100}%` }}
           />
@@ -126,7 +127,6 @@ export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
         </div>
       </div>
 
-      {/* Year Filter */}
       <div className="p-5 border-b bg-white">
         <label className="text-sm font-medium text-gray-700">Filter by Year</label>
         <select
@@ -141,11 +141,10 @@ export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
         </select>
       </div>
 
-      {/* Monthly Breakdown */}
       <div className="divide-y">
         {filteredMonths.map((month, index) => (
           <div key={index} className="hover:bg-gray-50">
-            <div 
+            <div
               className="p-4 cursor-pointer flex items-center justify-between"
               onClick={() => toggleMonth(index)}
             >
@@ -171,7 +170,7 @@ export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
                 </div>
                 <div className="w-32">
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full ${
                         month.status === 'paid' ? 'bg-green-500' :
                         month.status === 'partial' ? 'bg-yellow-500' :
@@ -187,8 +186,7 @@ export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
                 {expandedMonths[index] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
               </div>
             </div>
-            
-            {/* Expanded Details */}
+
             {expandedMonths[index] && (
               <div className="bg-gray-50 p-4 border-t">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">📋 Payment Details</h4>
@@ -200,7 +198,7 @@ export default function MonthlyPaymentCalculator({ rentalId, userRole }) {
                           <p className="text-sm font-medium text-gray-800">{formatCurrency(payment.amount)}</p>
                           <p className="text-xs text-gray-500">{formatDate(payment.date)}</p>
                         </div>
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">✅ Paid</span>
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">✓ Paid</span>
                       </div>
                     ))}
                   </div>
