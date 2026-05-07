@@ -11,8 +11,8 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:5000',
-        description: 'Development server',
+        url: process.env.API_URL || 'http://localhost:5000',
+        description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server',
       },
     ],
     components: {
@@ -33,5 +33,5 @@ const swaggerSpec = swaggerJsdoc(options)
 
 export const setupSwagger = (app) => {
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
-  console.log('📚 Swagger docs available at http://localhost:5000/api-docs')
+  console.log('📚 Swagger docs available at /api-docs')
 }

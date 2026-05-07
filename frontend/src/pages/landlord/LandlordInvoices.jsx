@@ -6,7 +6,7 @@ import {
   Plus, CreditCard, CheckCircle, AlertCircle,
   Clock, MapPin, User, ChevronRight
 } from 'lucide-react'
-import { formatCurrency, formatDate, getStatusColor } from '../../utils/helpers'
+import { formatCurrency, formatDate } from '../../utils/helpers'
 
 const statusIcons = {
   paid: <CheckCircle size={14} className="text-green-500" />,

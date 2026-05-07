@@ -11,7 +11,7 @@ import {
   Phone, MapPin, RefreshCw, ChevronDown,
   ChevronUp, Plus, X, Trash2
 } from 'lucide-react'
-import { formatCurrency, formatDate, getStatusColor } from '../../utils/helpers'
+import { formatCurrency, formatDate } from '../../utils/helpers'
 import PaymentHistoryModal from '../../components/common/PaymentHistoryModal'
 
 const statusIcons = {

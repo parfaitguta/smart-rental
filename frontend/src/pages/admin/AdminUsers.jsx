@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
-import { User, Mail, Phone, Shield, Trash2, Edit, Plus, X, CheckCircle, XCircle } from 'lucide-react'
+import { Trash2, Plus, X, CheckCircle, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDate } from '../../utils/helpers'
 
@@ -70,19 +70,6 @@ export default function AdminUsers() {
     } catch (err) {
       toast.error('Failed to update role')
     }
-  }
-
-  const getRoleBadge = (role) => {
-    const colors = {
-      admin: 'bg-red-100 text-red-700',
-      landlord: 'bg-blue-100 text-blue-700',
-      renter: 'bg-green-100 text-green-700'
-    }
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[role] || 'bg-gray-100'}`}>
-        {role}
-      </span>
-    )
   }
 
   if (loading) {

@@ -37,7 +37,7 @@ export default function Messages() {
       // Clear the state so it doesn't reopen on refresh
       navigate('/messages', { replace: true })
     }
-  }, [location.state])
+  }, [location.state, navigate])
 
   useEffect(() => {
     fetchConversations()

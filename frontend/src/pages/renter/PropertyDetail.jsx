@@ -16,7 +16,7 @@ const openGoogleMaps = (latitude, longitude, address) => {
   const lat = latitude || -1.9441;
   const lng = longitude || 30.0619;
   const encodedAddress = encodeURIComponent(address);
-  window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
+  window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}&query_place_id=${lat},${lng}`, '_blank');
 };
 
 export default function PropertyDetail() {

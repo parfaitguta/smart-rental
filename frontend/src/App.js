@@ -49,8 +49,6 @@ const Layout = ({ children }) => {
 }
 
 export default function App() {
-  const { user } = useAuth()
-
   return (
     <BrowserRouter>
       <Toaster position="top-right" />

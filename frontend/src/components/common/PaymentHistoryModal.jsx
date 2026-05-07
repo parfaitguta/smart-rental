@@ -12,7 +12,7 @@ export default function PaymentHistoryModal({ rental, isOpen, onClose }) {
     if (isOpen && rental) {
       fetchPaymentHistory()
     }
-  }, [isOpen, rental])
+  }, [isOpen, rental]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPaymentHistory = async () => {
     try {

@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import { 
-  Users, Home, Key, DollarSign, TrendingUp, 
-  Calendar, CheckCircle, XCircle, Clock, Activity
+  Users, Home, Key, DollarSign, CheckCircle, Activity
 } from 'lucide-react'
 import { formatCurrency } from '../../utils/helpers'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line
+  Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell
 } from 'recharts'
 
 export default function AdminDashboard() {

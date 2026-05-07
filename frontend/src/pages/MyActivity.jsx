@@ -72,7 +72,7 @@ export default function MyActivity() {
     }
   }
 
-  useEffect(() => { fetchActivity() }, [limit])
+  useEffect(() => { fetchActivity() }, [limit]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <Spinner size="lg" />
 

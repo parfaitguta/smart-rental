@@ -4,7 +4,6 @@ import { getProperties } from '../../api/propertyApi'
 import Spinner from '../../components/common/Spinner'
 import { MapPin, Search, SlidersHorizontal } from 'lucide-react'
 import { formatCurrency, getStatusColor } from '../../utils/helpers'
-import { getPropertyImages } from '../../api/propertyApi'
 
 const provinces = ['Kigali', 'Northern', 'Southern', 'Eastern', 'Western']
 
@@ -31,7 +30,7 @@ export default function SearchProperties() {
     }
   }
 
-  useEffect(() => { fetchProperties() }, [])
+  useEffect(() => { fetchProperties() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = (e) => {
     e.preventDefault()

@@ -2,7 +2,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
-import { LogOut, User, Bell, Home, Globe } from 'lucide-react'
+import { LogOut, Home, Globe } from 'lucide-react'
 import { useState } from 'react'
 
 export default function Navbar() {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
-import { Home, MapPin, User, Trash2, Eye } from 'lucide-react'
+import { MapPin, User, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatCurrency, formatDate } from '../../utils/helpers'
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getLandlordReviews } from '../../api/reviewApi'
 import Spinner from '../../components/common/Spinner'
 import { StarDisplay } from '../../components/common/StarRating'
-import { MapPin, Star, TrendingUp } from 'lucide-react'
+import { Star, TrendingUp } from 'lucide-react'
 import { formatDate } from '../../utils/helpers'
 
 export default function LandlordReviews() {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
-import { Activity, Filter, Download } from 'lucide-react'
+// eslint-disable-next-line no-unused-vars
+import { Filter } from 'lucide-react'
 import { formatDate } from '../../utils/helpers'
 
 export default function AdminActivity() {
@@ -12,7 +13,7 @@ export default function AdminActivity() {
   useEffect(() => {
     fetchUsers()
     fetchLogs()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchUsers = async () => {
     try {

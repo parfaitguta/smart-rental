@@ -14,7 +14,7 @@ export default function MonthlyPaymentSelector({ rentalId, userRole }) {
     if (rentalId) {
       fetchMonthlyBreakdown()
     }
-  }, [rentalId])
+  }, [rentalId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchMonthlyBreakdown = async () => {
     try {

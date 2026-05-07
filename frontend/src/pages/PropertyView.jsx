@@ -25,7 +25,7 @@ export default function PropertyView() {
       })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, navigate])
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">

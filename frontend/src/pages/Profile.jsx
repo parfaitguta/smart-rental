@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 
 export default function Profile() {
-  const { user, login } = useAuth()
+  const { login } = useAuth()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('profile')

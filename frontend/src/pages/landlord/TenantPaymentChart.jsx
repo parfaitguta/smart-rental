@@ -9,7 +9,7 @@ import api from '../../api/axios'
 import Spinner from '../../components/common/Spinner'
 import toast from 'react-hot-toast'
 import {
-  ArrowLeft, Plus, CheckCircle, Clock,
+  ArrowLeft, Plus, CheckCircle,
   AlertCircle, Trash2, TrendingUp
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../utils/helpers'
@@ -50,7 +50,7 @@ export default function TenantPaymentChart() {
     }
   }
 
-  useEffect(() => { fetchData() }, [rentalId])
+  useEffect(() => { fetchData() }, [rentalId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreate = async (e) => {
     e.preventDefault()

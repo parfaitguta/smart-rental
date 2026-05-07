@@ -14,7 +14,7 @@ export default function TenantMonthSelector({ rentalId, tenantName, propertyTitl
     if (rentalId) {
       fetchMonthlyBreakdown()
     }
-  }, [rentalId])
+  }, [rentalId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchMonthlyBreakdown = async () => {
     try {
