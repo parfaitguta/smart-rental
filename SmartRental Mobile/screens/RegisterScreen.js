@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Styl
 import axios from 'axios';
 import { useLanguage } from '../context/LanguageContext';
 
-const API_URL = 'https://smart-rental-cqr0.onrender.com/api';
+const API_URL = 'https://smart-rental-cqr0.onrender.com';
 
 export default function RegisterScreen({ navigation }) {
   const { t } = useLanguage();

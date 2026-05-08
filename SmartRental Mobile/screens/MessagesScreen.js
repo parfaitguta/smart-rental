@@ -16,7 +16,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { useLanguage } from '../context/LanguageContext';
 
-const API_URL = 'https://smart-rental-cqr0.onrender.com/api';
+const API_URL = 'https://smart-rental-cqr0.onrender.com';
 
 export default function MessagesScreen({ navigation, route }) {
   const { t } = useLanguage();

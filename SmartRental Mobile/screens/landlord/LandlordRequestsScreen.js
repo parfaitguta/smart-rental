@@ -13,7 +13,7 @@ import {
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const API_URL = 'https://smart-rental-cqr0.onrender.com/api';
+const API_URL = 'https://smart-rental-cqr0.onrender.com';
 
 export default function LandlordRequestsScreen({ navigation }) {
   const [requests, setRequests] = useState([]);

@@ -14,7 +14,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useLanguage } from '../context/LanguageContext';
 import Logo from '../components/Logo';
 
-const API_URL = 'https://smart-rental-cqr0.onrender.com/api';
+const API_URL = 'https://smart-rental-cqr0.onrender.com';
 
 const formatCurrency = (amount) => {
   if (!amount) return 'RWF 0';
