@@ -16,7 +16,7 @@ import {
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const API_URL = 'http://192.168.1.101:5000/api';
+const API_URL = 'https://smart-rental-cqr0.onrender.com/api';
 
 const formatCurrency = (amount) => {
   if (!amount) return 'RWF 0';
