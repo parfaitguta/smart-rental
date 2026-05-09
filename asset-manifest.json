@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/smart-rental-web/static/css/main.3feb04bb.css",
+    "main.js": "/smart-rental-web/static/js/main.ada186a8.js",
+    "index.html": "/smart-rental-web/index.html",
+    "main.3feb04bb.css.map": "/smart-rental-web/static/css/main.3feb04bb.css.map",
+    "main.ada186a8.js.map": "/smart-rental-web/static/js/main.ada186a8.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.3feb04bb.css",
+    "static/js/main.ada186a8.js"
+  ]
+}
