@@ -1,3 +1,4 @@
+// backend/src/controllers/authController.js
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
@@ -192,7 +193,11 @@ export const forgotPassword = async (req, res) => {
       [resetToken, resetTokenExpires, user.id]
     )
 
-    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`
+    // ✅ FIXED: Use FRONTEND_URL from environment variable instead of localhost
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetUrl = `${FRONTEND_URL}/reset-password/${resetToken}`;
+
+    console.log(`🔗 Reset URL: ${resetUrl}`); // Debug log
 
     try {
       await sendResetEmail(user.email, resetUrl, user.full_name)
