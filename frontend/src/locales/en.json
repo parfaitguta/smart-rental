@@ -38,13 +38,15 @@
     "dashboard": "Dashboard",
     "properties": "Properties",
     "rentals": "Rentals",
+    "tenants": "Tenants",
     "payments": "Payments",
     "invoices": "Invoices",
     "messages": "Messages",
     "profile": "Profile",
     "users": "Users",
     "reports": "Reports",
-    "settings": "Settings"
+    "settings": "Settings",
+    "requests": "Requests"
   },
   "home": {
     "title": "Home",

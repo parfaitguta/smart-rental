@@ -1,3 +1,4 @@
+// frontend/src/pages/landlord/ManageRentals.jsx
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import Spinner from '../../components/common/Spinner'
@@ -5,14 +6,15 @@ import toast from 'react-hot-toast'
 import { Home, Calendar, FileText, X, User, Phone, Mail, Plus } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../utils/helpers'
 
-const API_BASE_URL = process.env.REACT_APP_API_URL 
-  ? `${process.env.REACT_APP_API_URL}/api` 
-  : 'http://localhost:5000/api'
+// Use the production URL directly
+const PRODUCTION_URL = 'https://smart-rental-cqr0.onrender.com';
+const API_BASE_URL = `${PRODUCTION_URL}/api`;
 
 export default function ManageRentals() {
   const [rentals, setRentals] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [downloading, setDownloading] = useState(null)
   const [form, setForm] = useState({
     property_id: '', tenant_id: '', start_date: '', end_date: '', monthly_rent: ''
   })
@@ -59,15 +61,18 @@ export default function ManageRentals() {
   }
 
   const handleDownloadLease = async (rentalId) => {
+    setDownloading(rentalId)
     try {
       const token = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/lease/${rentalId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
+      
       if (!response.ok) {
-        toast.error('Lease agreement not available')
-        return
+        const errorText = await response.text()
+        throw new Error(errorText || 'Failed to download lease')
       }
+      
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -77,7 +82,10 @@ export default function ManageRentals() {
       window.URL.revokeObjectURL(url)
       toast.success('Lease agreement downloaded!')
     } catch (err) {
-      toast.error('Failed to download lease')
+      console.error('Download error:', err)
+      toast.error(err.message || 'Failed to download lease')
+    } finally {
+      setDownloading(null)
     }
   }
 
@@ -247,9 +255,11 @@ export default function ManageRentals() {
                 <div className="flex flex-wrap gap-2 pt-3 border-t">
                   <button
                     onClick={() => handleDownloadLease(rental.id)}
-                    className="flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    disabled={downloading === rental.id}
+                    className="flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
                   >
-                    <FileText size={14} /> Download Lease Agreement
+                    <FileText size={14} /> 
+                    {downloading === rental.id ? 'Downloading...' : 'Download Lease Agreement'}
                   </button>
                   {rental.status === 'active' && (
                     <button

@@ -1,13 +1,15 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL 
-  ? `${process.env.REACT_APP_API_URL}/api` 
-  : 'http://localhost:5000/api'
+// frontend/src/api/leaseApi.js
+import { API_BASE_URL } from '../config'
 
 export const downloadLease = async (rentalId) => {
   const token = localStorage.getItem('token')
   const response = await fetch(`${API_BASE_URL}/lease/${rentalId}`, {
     headers: { Authorization: `Bearer ${token}` }
   })
-  if (!response.ok) throw new Error('Failed to generate lease')
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || 'Failed to generate lease')
+  }
   const blob = await response.blob()
   const url = window.URL.createObjectURL(blob)
   const a = document.createElement('a')

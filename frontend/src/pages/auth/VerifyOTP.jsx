@@ -1,13 +1,10 @@
+// frontend/src/pages/auth/VerifyOTP.jsx - FIXED VERSION
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import axios from 'axios'
+import api from '../../api/axios'  // ✅ Use the configured api instance
 import toast from 'react-hot-toast'
 import { ShieldCheck, RefreshCw } from 'lucide-react'
-
-const API_BASE_URL = process.env.REACT_APP_API_URL 
-  ? `${process.env.REACT_APP_API_URL}/api` 
-  : 'http://localhost:5000/api'
 
 export default function VerifyOTP() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -62,7 +59,8 @@ export default function VerifyOTP() {
     }
     setLoading(true)
     try {
-      const res = await axios.post(`${API_BASE_URL}/auth/verify-otp`, {
+      // ✅ Use api instance (automatically uses correct base URL)
+      const res = await api.post('/auth/verify-otp', {
         email, otp: otpCode
       })
       login(res.data.token, res.data.user)
@@ -83,13 +81,14 @@ export default function VerifyOTP() {
   const handleResend = async () => {
     setResending(true)
     try {
-      await axios.post(`${API_BASE_URL}/auth/resend-otp`, { email })
+      // ✅ Use api instance
+      await api.post('/auth/resend-otp', { email })
       toast.success('New OTP sent to your email!')
       setCountdown(60)
       setOtp(['', '', '', '', '', ''])
       inputs.current[0]?.focus()
     } catch (err) {
-      toast.error('Failed to resend OTP')
+      toast.error(err.response?.data?.message || 'Failed to resend OTP')
     } finally {
       setResending(false)
     }

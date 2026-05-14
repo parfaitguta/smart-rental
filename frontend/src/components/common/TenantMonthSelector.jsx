@@ -1,11 +1,8 @@
+// frontend/src/components/common/TenantMonthSelector.jsx
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api/axios'  // Use the configured api instance instead of axios directly
 import { Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../utils/helpers'
-
-const API_BASE_URL = process.env.REACT_APP_API_URL 
-  ? `${process.env.REACT_APP_API_URL}/api` 
-  : 'http://localhost:5000/api'
 
 export default function TenantMonthSelector({ rentalId, tenantName, propertyTitle, monthlyRent }) {
   const [months, setMonths] = useState([])
@@ -22,10 +19,7 @@ export default function TenantMonthSelector({ rentalId, tenantName, propertyTitl
 
   const fetchMonthlyBreakdown = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await axios.get(`${API_BASE_URL}/rentals/${rentalId}/monthly-breakdown`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await api.get(`/rentals/${rentalId}/monthly-breakdown`)
       const monthsList = response.data.monthly_breakdown
       setMonths(monthsList)
       if (monthsList.length > 0) {
@@ -33,7 +27,7 @@ export default function TenantMonthSelector({ rentalId, tenantName, propertyTitl
         setMonthData(monthsList[monthsList.length - 1])
       }
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error fetching monthly breakdown:', error)
       setError(error.response?.data?.message || error.message)
     } finally {
       setLoading(false)
@@ -144,7 +138,7 @@ export default function TenantMonthSelector({ rentalId, tenantName, propertyTitl
             </div>
           </div>
 
-          {monthData.payments.length > 0 && (
+          {monthData.payments && monthData.payments.length > 0 && (
             <div>
               <p className="text-xs font-medium text-gray-600 mb-2">Transactions</p>
               <div className="space-y-1">
@@ -161,7 +155,7 @@ export default function TenantMonthSelector({ rentalId, tenantName, propertyTitl
             </div>
           )}
 
-          {monthData.payments.length === 0 && monthData.status === 'unpaid' && (
+          {(!monthData.payments || monthData.payments.length === 0) && monthData.status === 'unpaid' && (
             <div className="bg-gray-50 rounded-lg p-3 text-center">
               <p className="text-gray-500 text-sm">No payments recorded for this month</p>
             </div>

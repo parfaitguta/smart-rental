@@ -21,6 +21,7 @@ export default function MyRentals() {
   const [paymentRequests, setPaymentRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCalculator, setShowCalculator] = useState(null)
+  const [downloadingLease, setDownloadingLease] = useState(null)
 
   const messageLandlord = (landlordId, landlordName, propertyTitle) => {
     navigate('/messages', {
@@ -78,11 +79,22 @@ export default function MyRentals() {
   }
 
   const handleDownloadLease = async (rentalId) => {
+    setDownloadingLease(rentalId)
     try {
       await downloadLease(rentalId)
-      toast.success('Lease agreement downloaded!')
+      toast.success('Lease agreement downloaded successfully!')
     } catch (err) {
-      toast.error('Failed to download lease')
+      console.error('Lease download error:', err)
+      // Show more specific error message
+      if (err.message === 'Failed to generate lease') {
+        toast.error('Could not generate lease. Please contact landlord.')
+      } else if (err.message === 'Network request failed') {
+        toast.error('Network error. Check your connection.')
+      } else {
+        toast.error(err.message || 'Failed to download lease')
+      }
+    } finally {
+      setDownloadingLease(null)
     }
   }
 
@@ -123,9 +135,11 @@ export default function MyRentals() {
                   </button>
                   <button
                     onClick={() => handleDownloadLease(r.id)}
-                    className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50"
+                    disabled={downloadingLease === r.id}
+                    className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-50"
                   >
-                    <FileText size={12} /> Lease
+                    <Download size={12} />
+                    {downloadingLease === r.id ? 'Downloading...' : 'Lease Agreement'}
                   </button>
                   <button
                     onClick={() => setShowCalculator(showCalculator === r.id ? null : r.id)}
@@ -146,6 +160,7 @@ export default function MyRentals() {
                 </span>
               </div>
 
+              {/* Payment Requests Section */}
               {paymentRequests.filter(pr => pr.rental_id === r.id).length > 0 && (
                 <div className="border-t pt-3 mb-3">
                   <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
@@ -182,6 +197,7 @@ export default function MyRentals() {
                 </div>
               )}
 
+              {/* Payment History Section */}
               <div className="border-t pt-3">
                 <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                   <CreditCard size={14} /> Payment History
@@ -192,10 +208,10 @@ export default function MyRentals() {
                   <div className="space-y-1">
                     {payments.filter(p => p.rental_id === r.id).map(pay => (
                       <div key={pay.id}
-                        className="flex justify-between items-center text-xs text-gray-600 py-1.5 border-b border-gray-50 gap-2">
+                        className="flex justify-between items-center text-xs text-gray-600 py-1.5 border-b border-gray-50 gap-2 flex-wrap">
                         <span>{formatDate(pay.payment_date)}</span>
                         <span className="font-medium">{formatCurrency(pay.amount)}</span>
-                        <span className="capitalize">{pay.method.replace('_', ' ')}</span>
+                        <span className="capitalize">{pay.method?.replace('_', ' ') || 'N/A'}</span>
                         <span className={`px-2 py-0.5 rounded-full ${getStatusColor(pay.status)}`}>
                           {pay.status}
                         </span>

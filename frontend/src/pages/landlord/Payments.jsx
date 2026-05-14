@@ -1,13 +1,12 @@
+// frontend/src/pages/landlord/Payments.jsx
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { getLandlordPayments, getPaymentSummary, getMonthlyReport, recordPayment, updatePaymentStatus } from '../../api/paymentApi'
 import Spinner from '../../components/common/Spinner'
 import toast from 'react-hot-toast'
-import { Plus, TrendingUp, AlertCircle, CheckCircle, Clock, Download, X } from 'lucide-react'
+import { Plus, TrendingUp, AlertCircle, CheckCircle, Clock, Download, X, Send } from 'lucide-react'
 import { formatCurrency, formatDate, getStatusColor } from '../../utils/helpers'
-
-const API_BASE_URL = process.env.REACT_APP_API_URL 
-  ? `${process.env.REACT_APP_API_URL}/api` 
-  : 'http://localhost:5000/api'
+import { API_BASE_URL } from '../../config'
 
 export default function Payments() {
   const [payments, setPayments] = useState([])
@@ -16,6 +15,7 @@ export default function Payments() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [downloading, setDownloading] = useState(null)
   const [form, setForm] = useState({
     rental_id: '', amount: '', payment_date: '', method: 'cash', status: 'paid', notes: ''
   })
@@ -67,26 +67,187 @@ export default function Payments() {
     }
   }
 
-  const handleDownloadReceipt = async (paymentId) => {
+  // Generate and download receipt (works without backend)
+  const handleDownloadReceipt = (payment) => {
+    setDownloading(payment.id)
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE_URL}/receipts/${paymentId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (!response.ok) {
-        toast.error('Receipt not available for this payment')
-        return
-      }
-      const blob = await response.blob()
+      // Create HTML receipt
+      const receiptHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Payment Receipt - ${payment.id}</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Arial, sans-serif;
+              margin: 0;
+              padding: 20px;
+              background: #f5f5f5;
+            }
+            .receipt-container {
+              max-width: 600px;
+              margin: 0 auto;
+              background: white;
+              border-radius: 12px;
+              box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+              overflow: hidden;
+            }
+            .header {
+              background: linear-gradient(135deg, #2563eb, #1d4ed8);
+              color: white;
+              padding: 30px;
+              text-align: center;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 28px;
+            }
+            .header p {
+              margin: 5px 0 0;
+              opacity: 0.9;
+            }
+            .content {
+              padding: 30px;
+            }
+            .receipt-title {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .receipt-title h2 {
+              margin: 0;
+              color: #333;
+            }
+            .receipt-title .receipt-no {
+              color: #666;
+              font-size: 14px;
+              margin-top: 5px;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 12px 0;
+              border-bottom: 1px solid #eee;
+            }
+            .info-label {
+              font-weight: 600;
+              color: #555;
+            }
+            .info-value {
+              color: #333;
+            }
+            .amount-row {
+              background: #f0f9ff;
+              padding: 15px;
+              border-radius: 8px;
+              margin: 20px 0;
+              text-align: center;
+            }
+            .amount-label {
+              font-size: 14px;
+              color: #666;
+            }
+            .amount-value {
+              font-size: 32px;
+              font-weight: bold;
+              color: #2563eb;
+            }
+            .status-paid {
+              display: inline-block;
+              background: #10b981;
+              color: white;
+              padding: 4px 12px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: 600;
+            }
+            .footer {
+              background: #f8fafc;
+              padding: 20px;
+              text-align: center;
+              font-size: 12px;
+              color: #888;
+              border-top: 1px solid #e2e8f0;
+            }
+            @media print {
+              body {
+                background: white;
+                padding: 0;
+              }
+              .receipt-container {
+                box-shadow: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="receipt-container">
+            <div class="header">
+              <h1>Smart Rental</h1>
+              <p>Payment Receipt</p>
+            </div>
+            <div class="content">
+              <div class="receipt-title">
+                <h2>PAYMENT RECEIPT</h2>
+                <div class="receipt-no">Receipt #: ${payment.id}</div>
+              </div>
+              
+              <div class="info-row">
+                <span class="info-label">Date:</span>
+                <span class="info-value">${formatDate(payment.payment_date)}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Tenant Name:</span>
+                <span class="info-value">${payment.tenant_name || 'N/A'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Property:</span>
+                <span class="info-value">${payment.property_title || 'N/A'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Payment Method:</span>
+                <span class="info-value">${payment.method?.replace('_', ' ') || 'Cash'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Status:</span>
+                <span class="info-value"><span class="status-paid">PAID</span></span>
+              </div>
+              ${payment.notes ? `
+              <div class="info-row">
+                <span class="info-label">Notes:</span>
+                <span class="info-value">${payment.notes}</span>
+              </div>
+              ` : ''}
+              
+              <div class="amount-row">
+                <div class="amount-label">Amount Paid</div>
+                <div class="amount-value">${formatCurrency(payment.amount)}</div>
+              </div>
+            </div>
+            <div class="footer">
+              <p>Thank you for your payment!</p>
+              <p>This is a computer-generated receipt. Valid without signature.</p>
+              <p>Generated on: ${new Date().toLocaleString()}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+      
+      const blob = new Blob([receiptHtml], { type: 'text/html' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `receipt-${paymentId}.pdf`
+      a.download = `receipt-${payment.id}.html`
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
-      toast.success('Receipt downloaded!')
+      toast.success('Receipt generated and downloaded!')
     } catch (err) {
-      toast.error('Failed to download receipt')
+      console.error('Download error:', err)
+      toast.error('Failed to generate receipt')
+    } finally {
+      setDownloading(null)
     }
   }
 
@@ -100,6 +261,12 @@ export default function Payments() {
           <p className="text-gray-500 text-sm mt-1">Track and record rent payments</p>
         </div>
         <div className="flex gap-2">
+          <Link
+            to="/landlord/payment-requests"
+            className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+          >
+            <Send size={16} /> Request Payment
+          </Link>
           <button
             onClick={() => setShowHistoryModal(true)}
             className="border border-gray-300 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
@@ -264,19 +431,20 @@ export default function Payments() {
                       </button>
                     )}
                     {p.status === 'paid' && (
-                      <button onClick={() => handleDownloadReceipt(p.id)}
-                        className="flex items-center gap-1 text-blue-500 hover:text-blue-700 text-xs">
-                        <Download size={13} /> Receipt
+                      <button onClick={() => handleDownloadReceipt(p)} disabled={downloading === p.id}
+                        className="flex items-center gap-1 text-blue-500 hover:text-blue-700 text-xs disabled:opacity-50">
+                        <Download size={13} /> {downloading === p.id ? '...' : 'Receipt'}
                       </button>
                     )}
                   </div>
                 </td>
-               </tr>
+              </tr>
             ))}
           </tbody>
         </table>
       </div>
 
+      {/* Full History Modal */}
       {showHistoryModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
@@ -300,33 +468,6 @@ export default function Payments() {
                   <p className="text-2xl font-bold">{payments.length}</p>
                 </div>
               </div>
-
-              {(() => {
-                const propertyMap = {}
-                payments.forEach(p => {
-                  if (!propertyMap[p.property_title]) {
-                    propertyMap[p.property_title] = { total: 0, count: 0 }
-                  }
-                  propertyMap[p.property_title].total += parseFloat(p.amount)
-                  propertyMap[p.property_title].count++
-                })
-                return Object.keys(propertyMap).length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-gray-700 mb-3">Payments by Property</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {Object.entries(propertyMap).map(([property, data]) => (
-                        <div key={property} className="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
-                          <span className="font-medium">{property}</span>
-                          <div className="text-right">
-                            <span className="text-green-600 font-semibold">{formatCurrency(data.total)}</span>
-                            <p className="text-xs text-gray-500">{data.count} payment(s)</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()}
 
               {payments.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -363,7 +504,6 @@ export default function Payments() {
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <p>No payment transactions found.</p>
-                  <p className="text-sm mt-2">Record a payment first using the "Record Payment" button above.</p>
                 </div>
               )}
             </div>

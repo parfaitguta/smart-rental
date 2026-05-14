@@ -23,6 +23,27 @@ export const getInvoice = (id) => api.get(`/invoices/${id}`)
 export const payInvoice = (id, data) => api.post(`/invoices/${id}/pay`, data)
 export const verifyPayment = (invoiceId, paymentId) => api.post('/invoices/verify', { payment_id: paymentId })
 
+// Download invoice (returns blob for PDF)
+export const downloadInvoice = async (invoiceId) => {
+  const token = localStorage.getItem('token')
+  const response = await fetch(`${API_BASE_URL}/invoices/${invoiceId}/download`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to download invoice')
+  }
+  
+  const blob = await response.blob()
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `invoice-${invoiceId}.pdf`
+  a.click()
+  window.URL.revokeObjectURL(url)
+  return { success: true }
+}
+
 // Payment History functions
 export const getRentalPaymentHistory = (rentalId) => api.get(`/invoices/rental/${rentalId}/payment-history`)
 export const getCurrentMonthStatus = (rentalId) => api.get(`/invoices/rental/${rentalId}/current-status`)

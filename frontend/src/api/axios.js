@@ -1,11 +1,11 @@
+// frontend/src/api/axios.js
 import axios from 'axios'
 
-const API_BASE_URL = process.env.REACT_APP_API_URL 
-  ? `${process.env.REACT_APP_API_URL}/api` 
-  : 'http://localhost:5000/api'
+// Use deployed backend - works from anywhere!
+const API_URL = 'https://smart-rental-cqr0.onrender.com'
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_URL}/api`,
   headers: { 'Content-Type': 'application/json' }
 })
 

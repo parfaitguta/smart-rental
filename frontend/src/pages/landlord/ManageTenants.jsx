@@ -1,3 +1,4 @@
+// frontend/src/pages/landlord/ManageTenants.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
@@ -6,10 +7,14 @@ import toast from 'react-hot-toast'
 import {
   User, MapPin, Phone, Mail, CreditCard,
   AlertTriangle, CheckCircle, XCircle,
-  FileText, Trash2, Plus, TrendingUp, Calendar, MessageSquare
+  FileText, Trash2, Plus, Calendar, MessageSquare,
+  Download, Printer
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '../../utils/helpers'
 import TenantMonthSelector from '../../components/common/TenantMonthSelector'
+
+// Import download utility - only print
+import { printData } from '../../utils/downloadUtils'
 
 const statusColors = {
   good: 'bg-green-100 text-green-700',
@@ -43,16 +48,17 @@ export default function ManageTenants() {
   const [terminateReason, setTerminateReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState('payments')
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false)
 
   const startChat = (userId, userName, propertyTitle) => {
-    navigate('/messages', { 
-      state: { 
-        startChat: true, 
-        userId: userId, 
+    navigate('/messages', {
+      state: {
+        startChat: true,
+        userId: userId,
         userName: userName,
         propertyTitle: propertyTitle,
         userRole: 'tenant'
-      } 
+      }
     })
   }
 
@@ -142,15 +148,124 @@ export default function ManageTenants() {
     }
   }
 
+  // Print Tenants List
+  const printTenantsList = () => {
+    const columns = [
+      { header: 'Tenant Name', accessor: 'tenant_name' },
+      { header: 'Property', accessor: 'property_title' },
+      { header: 'Location', accessor: (t) => `${t.district}, ${t.province}` },
+      { header: 'Monthly Rent', accessor: (t) => formatCurrency(t.monthly_rent) },
+      { header: 'Status', accessor: 'tenant_status' },
+      { header: 'Paid Months', accessor: 'paid_count' },
+      { header: 'Overdue', accessor: 'overdue_count' },
+      { header: 'Warnings', accessor: 'warning_count' },
+      { header: 'Start Date', accessor: (t) => formatDate(t.start_date) }
+    ]
+
+    const data = tenants.map(t => ({
+      tenant_name: t.tenant_name,
+      property_title: t.property_title,
+      location: `${t.district}, ${t.province}`,
+      monthly_rent: formatCurrency(t.monthly_rent),
+      tenant_status: t.tenant_status,
+      paid_count: t.paid_count,
+      overdue_count: t.overdue_count,
+      warning_count: t.warning_count,
+      start_date: formatDate(t.start_date)
+    }))
+
+    printData(data, columns, 'Tenants List Report')
+    toast.success('Print window opened')
+    setShowDownloadMenu(false)
+  }
+
+  // Print Payments
+  const printPayments = () => {
+    if (!tenantDetail?.payments.length) {
+      toast.error('No payments to print')
+      return
+    }
+
+    const columns = [
+      { header: 'Date', accessor: (p) => formatDate(p.payment_date) },
+      { header: 'Amount', accessor: (p) => formatCurrency(p.amount) },
+      { header: 'Method', accessor: (p) => p.method?.replace('_', ' ') || 'N/A' },
+      { header: 'Status', accessor: 'status' },
+      { header: 'Notes', accessor: (p) => p.notes || '-' }
+    ]
+
+    const data = tenantDetail.payments.map(p => ({
+      date: formatDate(p.payment_date),
+      amount: formatCurrency(p.amount),
+      method: p.method?.replace('_', ' ') || 'N/A',
+      status: p.status,
+      notes: p.notes || '-'
+    }))
+
+    printData(data, columns, `Payment History - ${tenantDetail.tenant.tenant_name}`)
+    toast.success('Print window opened')
+  }
+
+  // Print Notes
+  const printNotes = () => {
+    if (!tenantDetail?.notes.length) {
+      toast.error('No notes to print')
+      return
+    }
+
+    const columns = [
+      { header: 'Date', accessor: (n) => formatDate(n.created_at) },
+      { header: 'Type', accessor: 'type' },
+      { header: 'Note', accessor: 'note' },
+      { header: 'Author', accessor: 'author_name' }
+    ]
+
+    const data = tenantDetail.notes.map(n => ({
+      date: formatDate(n.created_at),
+      type: n.type,
+      note: n.note,
+      author: n.author_name
+    }))
+
+    printData(data, columns, `Notes - ${tenantDetail.tenant.tenant_name}`)
+    toast.success('Print window opened')
+  }
+
   if (loading) return <Spinner size="lg" />
 
   return (
     <div className="flex gap-6 h-full">
       {/* Tenant List */}
       <div className="w-80 shrink-0">
-        <div className="mb-4">
-          <h1 className="text-xl font-bold text-gray-800">My Tenants</h1>
-          <p className="text-gray-500 text-sm mt-1">{tenants.length} tenant(s)</p>
+        <div className="mb-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">My Tenants</h1>
+            <p className="text-gray-500 text-sm mt-1">{tenants.length} tenant(s)</p>
+          </div>
+          
+          {/* Print Button for Tenants List */}
+          {tenants.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium"
+              >
+                <Download size={16} />
+                Print List
+              </button>
+              
+              {showDownloadMenu && (
+                <div className="absolute right-0 mt-2 w-36 bg-white rounded-lg shadow-lg border z-10">
+                  <button
+                    onClick={printTenantsList}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Printer size={14} /> Print
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {tenants.length === 0 ? (
@@ -186,7 +301,7 @@ export default function ManageTenants() {
                     <span className="text-red-500 font-medium">⚠ {t.overdue_count} overdue</span>
                   )}
                   {t.warning_count > 0 && (
-                    <span className="text-yellow-600 font-medium">⚡ {t.warning_count} warnings</span>
+                    <span className="text-yellow-600 font-medium">→ {t.warning_count} warnings</span>
                   )}
                 </div>
               </div>
@@ -263,24 +378,18 @@ export default function ManageTenants() {
                 </div>
               </div>
 
-              {/* Actions */}
+              {/* Actions - Payment Chart Button REMOVED */}
               {tenantDetail.tenant.status === 'active' && (
                 <div className="flex gap-2 mt-4 flex-wrap">
                   <button
                     onClick={() => startChat(
-                      tenantDetail.tenant.tenant_id, 
-                      tenantDetail.tenant.tenant_name, 
+                      tenantDetail.tenant.tenant_id,
+                      tenantDetail.tenant.tenant_name,
                       tenantDetail.tenant.property_title
                     )}
                     className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
                   >
                     <MessageSquare size={14} /> Message Tenant
-                  </button>
-                  <button
-                    onClick={() => navigate(`/landlord/tenants/${selectedTenant.id}/chart`)}
-                    className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                  >
-                    <TrendingUp size={14} /> Payment Chart
                   </button>
                   <button
                     onClick={() => { setShowNoteForm(!showNoteForm); setShowTerminateForm(false) }}
@@ -370,32 +479,51 @@ export default function ManageTenants() {
               )}
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-2 mb-4">
-              <button
-                onClick={() => setActiveTab('payments')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                  activeTab === 'payments' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border'
-                }`}
-              >
-                <CreditCard size={14} /> Payments ({tenantDetail.payments.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('months')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                  activeTab === 'months' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border'
-                }`}
-              >
-                <Calendar size={14} /> Monthly Status
-              </button>
-              <button
-                onClick={() => setActiveTab('notes')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                  activeTab === 'notes' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border'
-                }`}
-              >
-                <FileText size={14} /> Notes ({tenantDetail.notes.length})
-              </button>
+            {/* Tabs with Print Buttons */}
+            <div className="flex gap-2 mb-4 flex-wrap justify-between items-center">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab('payments')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                    activeTab === 'payments' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border'
+                  }`}
+                >
+                  <CreditCard size={14} /> Payments ({tenantDetail.payments.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('months')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                    activeTab === 'months' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border'
+                  }`}
+                >
+                  <Calendar size={14} /> Monthly Status
+                </button>
+                <button
+                  onClick={() => setActiveTab('notes')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                    activeTab === 'notes' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border'
+                  }`}
+                >
+                  <FileText size={14} /> Notes ({tenantDetail.notes.length})
+                </button>
+              </div>
+
+              {/* Print buttons for current tab */}
+              {activeTab === 'payments' && tenantDetail.payments.length > 0 && (
+                <div className="flex gap-2">
+                  <button onClick={printPayments} className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg flex items-center gap-1">
+                    <Printer size={12} /> Print
+                  </button>
+                </div>
+              )}
+
+              {activeTab === 'notes' && tenantDetail.notes.length > 0 && (
+                <div className="flex gap-2">
+                  <button onClick={printNotes} className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg flex items-center gap-1">
+                    <Printer size={12} /> Print
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Payments Tab */}
