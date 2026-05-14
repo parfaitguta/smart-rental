@@ -17,20 +17,37 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
-const normalizeEmail = (value) => String(value ?? '').trim()
+const normalizeEmail = (value) => String(value ?? '').trim().toLowerCase()
 
 export const register = async (req, res) => {
   try {
-    const { full_name, phone, password, role } = req.body
+    const full_name = String(req.body.full_name ?? '').trim()
+    const phone = String(req.body.phone ?? '').trim()
+    const password = String(req.body.password ?? '').trim()
+    const role = String(req.body.role ?? '').trim()
     const email = normalizeEmail(req.body.email)
 
-    if (!full_name || !email || !phone || !password || !role) {
-      return res.status(400).json({ message: 'All fields are required' })
+    const missing = []
+    if (!full_name) missing.push('full name')
+    if (!email) missing.push('email')
+    if (!phone) missing.push('phone')
+    if (!password) missing.push('password')
+    if (!role) missing.push('role')
+    if (missing.length) {
+      return res.status(400).json({
+        message: `Missing or empty: ${missing.join(', ')}. Please fill all fields.`
+      })
+    }
+
+    if (!['renter', 'landlord'].includes(role)) {
+      return res.status(400).json({ message: 'Role must be renter or landlord.' })
     }
 
     const existingUser = await findUserByEmail(email)
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already registered' })
+      return res.status(400).json({
+        message: 'This email is already registered. Try logging in or use a different email.'
+      })
     }
 
     const password_hash = await bcrypt.hash(password, 12)
@@ -63,6 +80,11 @@ export const register = async (req, res) => {
       email
     })
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({
+        message: 'This email is already registered. Try logging in or use a different email.'
+      })
+    }
     res.status(500).json({ message: 'Server error', error: error.message })
   }
 }

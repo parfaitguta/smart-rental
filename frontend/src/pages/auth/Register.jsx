@@ -1,8 +1,18 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { registerUser } from '../../api/authApi'
 import toast from 'react-hot-toast'
 import { Home, UserPlus } from 'lucide-react'
+
+function registerErrorMessage(err) {
+  const data = err.response?.data
+  if (typeof data?.message === 'string') return data.message
+  if (typeof data === 'string') return data
+  if (err.response?.status === 400) {
+    return 'Registration was rejected. Check that every field is filled and this email is not already in use.'
+  }
+  return err.message || 'Registration failed'
+}
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -10,21 +20,32 @@ export default function Register() {
   })
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const submitLock = useRef(false)
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (submitLock.current) return
+    submitLock.current = true
     setLoading(true)
     try {
-      await registerUser(form)
-      const email = form.email.trim()
+      const payload = {
+        full_name: form.full_name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+        role: form.role
+      }
+      await registerUser(payload)
+      const email = payload.email.toLowerCase()
       sessionStorage.setItem('verifyOtpEmail', email)
       toast.success('Account created! Check your email for the OTP.')
       navigate('/verify-otp', { state: { email } })
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed')
+      toast.error(registerErrorMessage(err))
     } finally {
+      submitLock.current = false
       setLoading(false)
     }
   }

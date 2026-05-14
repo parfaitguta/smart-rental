@@ -1,7 +1,12 @@
 import pool from '../config/db.js'
 
 export const findUserByEmail = async (email) => {
-  const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email])
+  const key = String(email ?? '').trim().toLowerCase()
+  if (!key) return undefined
+  const [rows] = await pool.query(
+    'SELECT * FROM users WHERE LOWER(TRIM(email)) = ? LIMIT 1',
+    [key]
+  )
   return rows[0]
 }
 
