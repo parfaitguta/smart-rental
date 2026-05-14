@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import api from '../../api/axios'
+import { verifyOtp, resendOtp } from '../../api/authApi'
 import toast from 'react-hot-toast'
 import { ShieldCheck, RefreshCw } from 'lucide-react'
 
@@ -77,8 +77,8 @@ export default function VerifyOTP() {
     }
     setLoading(true)
     try {
-      const res = await api.post('/auth/verify-otp', {
-        email,
+      const res = await verifyOtp({
+        email: email.trim().toLowerCase(),
         otp: otpCode
       })
       sessionStorage.removeItem(VERIFY_EMAIL_KEY)
@@ -89,7 +89,11 @@ export default function VerifyOTP() {
       else if (role === 'admin') navigate('/admin/dashboard')
       else navigate('/search')
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Invalid OTP')
+      const msg =
+        err.code === 'ECONNABORTED'
+          ? 'Request timed out. Try again in a moment.'
+          : err.response?.data?.message || 'Invalid OTP'
+      toast.error(msg)
       setOtp(['', '', '', '', '', ''])
       inputs.current[0]?.focus()
     } finally {
@@ -100,13 +104,17 @@ export default function VerifyOTP() {
   const handleResend = async () => {
     setResending(true)
     try {
-      await api.post('/auth/resend-otp', { email })
+      await resendOtp({ email: email.trim().toLowerCase() })
       toast.success('New OTP sent to your email!')
       setCountdown(60)
       setOtp(['', '', '', '', '', ''])
       inputs.current[0]?.focus()
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to resend OTP')
+      const msg =
+        err.code === 'ECONNABORTED'
+          ? 'Request timed out. Try again in a moment.'
+          : err.response?.data?.message || 'Failed to resend OTP'
+      toast.error(msg)
     } finally {
       setResending(false)
     }

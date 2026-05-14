@@ -8,7 +8,10 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  }
+  },
+  // Fail fast instead of hanging the HTTP request (and the "Creating account..." UI)
+  connectionTimeout: 20_000,
+  socketTimeout: 25_000
 })
 
 export const sendResetEmail = async (toEmail, resetUrl, userName) => {

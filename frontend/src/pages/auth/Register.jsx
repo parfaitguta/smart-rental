@@ -5,6 +5,12 @@ import toast from 'react-hot-toast'
 import { Home, UserPlus } from 'lucide-react'
 
 function registerErrorMessage(err) {
+  if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
+    return 'Request timed out. The server may be waking up (wait a minute) or email is slow. Please try again.'
+  }
+  if (!err.response && err.message === 'Network Error') {
+    return 'Network error — check your connection and that the API is reachable.'
+  }
   const data = err.response?.data
   if (typeof data?.message === 'string') return data.message
   if (typeof data === 'string') return data
