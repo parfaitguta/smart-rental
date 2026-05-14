@@ -40,6 +40,7 @@ import ManageRequests from './pages/landlord/ManageRequests';
 import LandlordInvoices from './pages/landlord/LandlordInvoices';
 import LandlordReviews from './pages/landlord/LandlordReviews';
 import PaymentRequest from './pages/landlord/PaymentRequest';
+import LandlordWallet from './pages/landlord/LandlordWallet';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -52,7 +53,7 @@ import SystemSettings from './pages/admin/SystemSettings';
 // Layout wrapper component
 const PageLayout = ({ children }) => {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
+    <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
       <Navbar />
       <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
         {children}
@@ -212,7 +213,7 @@ function App() {
             } />
 
             <Route path="/landlord/properties" element={
-              <ProtectedRoute allowedRoles={['landlord']}>
+              <ProtectedRoute allowedRoles={'landlord'}>
                 <PageLayout>
                   <MyProperties />
                 </PageLayout>
@@ -287,6 +288,14 @@ function App() {
               <ProtectedRoute allowedRoles={['landlord']}>
                 <PageLayout>
                   <LandlordReviews />
+                </PageLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/landlord/wallet" element={
+              <ProtectedRoute allowedRoles={['landlord']}>
+                <PageLayout>
+                  <LandlordWallet />
                 </PageLayout>
               </ProtectedRoute>
             } />

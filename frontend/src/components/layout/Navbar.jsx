@@ -2,7 +2,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
-import { LogOut, Home, Globe, Menu, X, MessageSquare, User, Settings, ChevronDown, Check } from 'lucide-react'
+import { LogOut, Home, Globe, Menu, X, MessageSquare, User, Settings, ChevronDown, Check, Moon, Sun, Wallet } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 
@@ -22,7 +22,27 @@ export default function Navbar() {
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('darkMode') === 'true'
     setDarkMode(savedDarkMode)
+    applyTheme(savedDarkMode)
   }, [])
+
+  const applyTheme = (isDark) => {
+    if (isDark) {
+      document.documentElement.classList.add('dark')
+      document.body.classList.add('dark')
+      document.body.style.backgroundColor = '#111827'
+    } else {
+      document.documentElement.classList.remove('dark')
+      document.body.classList.remove('dark')
+      document.body.style.backgroundColor = '#f3f4f6'
+    }
+  }
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode
+    setDarkMode(newDarkMode)
+    localStorage.setItem('darkMode', newDarkMode)
+    applyTheme(newDarkMode)
+  }
 
   // Fetch unread messages count
   useEffect(() => {
@@ -81,6 +101,7 @@ export default function Navbar() {
           { name: t('nav.rentals'), path: '/landlord/rentals', icon: '📄' },
           { name: t('nav.tenants'), path: '/landlord/tenants', icon: '👥' },
           { name: t('nav.payments'), path: '/landlord/payments', icon: '💰' },
+          { name: 'Wallet', path: '/landlord/wallet', icon: '💰' },
         ]
       case 'renter':
         return [
@@ -133,32 +154,47 @@ export default function Navbar() {
             {t('common.app_name')}
           </Link>
           
-          <div className="relative">
+          <div className="flex items-center gap-3">
+            {/* Dark Mode Toggle */}
             <button
-              onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${buttonBgClass} ${textColorClass}`}
+              onClick={toggleDarkMode}
+              className={`p-2 rounded-lg transition-colors ${
+                darkMode 
+                  ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
+                  : 'bg-gray-800 text-yellow-400 hover:bg-gray-700'
+              }`}
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              <Globe size={18} />
-              <span className="hidden sm:inline">{getCurrentLanguageName()}</span>
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            
-            {showLanguageMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 z-50">
-                {languages.map((lang) => (
-                  <button
-                    key={lang.code}
-                    onClick={() => handleLanguageChange(lang.code)}
-                    className={`w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 ${
-                      language === lang.code ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    <span>{lang.flag}</span>
-                    <span>{lang.label}</span>
-                    {language === lang.code && <Check size={16} className="ml-auto" />}
-                  </button>
-                ))}
-              </div>
-            )}
+
+            <div className="relative">
+              <button
+                onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${buttonBgClass} ${textColorClass}`}
+              >
+                <Globe size={18} />
+                <span className="hidden sm:inline">{getCurrentLanguageName()}</span>
+              </button>
+              
+              {showLanguageMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 z-50">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => handleLanguageChange(lang.code)}
+                      className={`w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 ${
+                        language === lang.code ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      <span>{lang.flag}</span>
+                      <span>{lang.label}</span>
+                      {language === lang.code && <Check size={16} className="ml-auto" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="flex gap-4">
@@ -200,10 +236,42 @@ export default function Navbar() {
                   <span>{item.name}</span>
                 </Link>
               ))}
+              
+              {/* Messages Link with Unread Badge */}
+              <Link
+                to="/messages"
+                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors relative ${
+                  location.pathname === '/messages'
+                    ? `${activeBgClass} ${textColorClass}`
+                    : `${textColorClass} ${hoverBgClass}`
+                }`}
+              >
+                <MessageSquare size={18} />
+                <span>{t('common.messages')}</span>
+                {unreadMessages > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                  </span>
+                )}
+              </Link>
             </div>
           </div>
           
           <div className="flex items-center gap-4">
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              className={`p-2 rounded-lg transition-colors ${
+                darkMode 
+                  ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
+                  : 'bg-gray-800 text-yellow-400 hover:bg-gray-700'
+              }`}
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
+            {/* Language Selector */}
             <div className="relative">
               <button
                 onClick={() => setShowLanguageMenu(!showLanguageMenu)}
@@ -232,6 +300,7 @@ export default function Navbar() {
               )}
             </div>
 
+            {/* Profile Avatar Dropdown */}
             <div className="relative">
               <button
                 onClick={(e) => {
@@ -272,6 +341,17 @@ export default function Navbar() {
                     {t('nav.settings')}
                   </Link>
 
+                  {user?.role === 'landlord' && (
+                    <Link
+                      to="/landlord/wallet"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <Wallet size={16} />
+                      Wallet
+                    </Link>
+                  )}
+
                   <div className="border-t dark:border-gray-700">
                     <button
                       onClick={handleLogout}
@@ -285,6 +365,7 @@ export default function Navbar() {
               )}
             </div>
 
+            {/* Mobile menu button */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
               className={`lg:hidden p-2 rounded-lg ${hoverBgClass} ${textColorClass}`}
@@ -294,6 +375,7 @@ export default function Navbar() {
           </div>
         </div>
 
+        {/* Mobile Navigation Links */}
         {showMobileMenu && (
           <div className={`lg:hidden mt-4 pt-4 border-t ${darkMode ? 'border-gray-700' : 'border-blue-800'}`}>
             <div className="flex flex-col gap-2">
@@ -313,6 +395,25 @@ export default function Navbar() {
                 </Link>
               ))}
 
+              {/* Messages Link in Mobile Menu */}
+              <Link
+                to="/messages"
+                onClick={() => setShowMobileMenu(false)}
+                className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-colors relative ${
+                  location.pathname === '/messages'
+                    ? `${activeBgClass} ${textColorClass}`
+                    : `${textColorClass} ${hoverBgClass}`
+                }`}
+              >
+                <MessageSquare size={18} />
+                <span>{t('common.messages')}</span>
+                {unreadMessages > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                  </span>
+                )}
+              </Link>
+
               <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-blue-700'} mt-2 pt-2`}>
                 <Link
                   to="/profile"
@@ -330,6 +431,16 @@ export default function Navbar() {
                   <Settings size={18} />
                   {t('nav.settings')}
                 </Link>
+                {user?.role === 'landlord' && (
+                  <Link
+                    to="/landlord/wallet"
+                    onClick={() => setShowMobileMenu(false)}
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg ${textColorClass} ${hoverBgClass}`}
+                  >
+                    <Wallet size={18} />
+                    Wallet
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className={`flex items-center gap-2 px-4 py-3 rounded-lg text-red-300 ${hoverBgClass} w-full text-left`}

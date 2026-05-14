@@ -39,6 +39,7 @@ import invoiceRoutes from './routes/invoiceRoutes.js'
 import activityRoutes from './routes/activityRoutes.js'
 import adminSettingsRoutes from './routes/adminSettings.js'  // ADD THIS
 import testRoutes from './routes/testRoutes.js'
+import walletRoutes from './routes/walletRoutes.js'
 
 setupSwagger(app)
 
@@ -61,6 +62,7 @@ app.use('/api/receipts', receiptRoutes)
 app.use('/api/lease', leaseRoutes)
 app.use('/api/activities', activityRoutes)
 app.use('/api', testRoutes)
+app.use('/api/wallet', walletRoutes)
 
 app.get('/', (req, res) => {
   res.json({ message: '✅ Smart Rental API is running', status: 'ok' })
