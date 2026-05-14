@@ -37,6 +37,7 @@ import leaseRoutes from './routes/leaseRoutes.js'
 import { setupSwagger } from './config/swagger.js'
 import invoiceRoutes from './routes/invoiceRoutes.js'
 import activityRoutes from './routes/activityRoutes.js'
+import adminSettingsRoutes from './routes/adminSettings.js'  // ADD THIS
 
 setupSwagger(app)
 
@@ -47,6 +48,7 @@ app.use('/api/requests', rentalRequestRoutes)
 app.use('/api/rentals', rentalRoutes)
 app.use('/api/payments', paymentRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/admin-settings', adminSettingsRoutes)  // ADD THIS
 app.use('/api/messages', messageRoutes)
 app.use('/api/images', imageRoutes)
 app.use('/api/sms', smsRoutes)
