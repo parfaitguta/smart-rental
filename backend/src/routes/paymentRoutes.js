@@ -6,6 +6,7 @@ import {
 } from '../controllers/paymentController.js'
 import { protect, allowRoles } from '../middleware/authMiddleware.js'
 import pool from '../config/db.js'
+import paypack, { formatPhoneForPaypack } from '../config/paypack.js'
 
 const router = express.Router()
 
@@ -202,51 +203,54 @@ router.post('/invoices/:id/pay', protect, allowRoles('renter'), async (req, res)
       })
     }
 
-    // Format phone number
-    let formattedPhone = phone.trim().replace(/\s+/g, '')
-    if (formattedPhone.startsWith('07')) {
-      formattedPhone = '250' + formattedPhone.slice(1)
-    } else if (formattedPhone.startsWith('+250')) {
-      formattedPhone = formattedPhone.slice(1)
+    const formattedPhone = formatPhoneForPaypack(phone)
+    if (!formattedPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Enter a valid Rwanda mobile money number (e.g. 078… or 25078…).'
+      })
     }
 
     console.log(`Processing ${method} payment of ${payAmount} from phone ${formattedPhone}`)
 
-    // Process payment via PayPack
     let paymentResult = null
-    let paypack = null
 
     try {
-      const paypackModule = await import('../config/paypack.js')
-      paypack = paypackModule.default
-      
-      console.log('Paypack methods available:', Object.keys(paypack))
+      if (typeof paypack.cashin !== 'function') {
+        throw new Error('PayPack cashin is not available')
+      }
 
-      // Try to use cashin method
-      if (typeof paypack.cashin === 'function') {
-        paymentResult = await paypack.cashin({
-          amount: payAmount,
-          number: formattedPhone,
-          mode: process.env.PAYPACK_MODE || 'live'
-        })
-      } 
-      // If cashin not available, use mock for sandbox
-      else if (process.env.PAYPACK_MODE === 'sandbox') {
-        console.log('Using sandbox mock payment')
-        paymentResult = {
-          success: true,
-          data: {
-            ref: `SANDBOX_${Date.now()}`,
-            status: 'pending',
-            amount: payAmount
-          }
-        }
-      }
-      else {
-        throw new Error('PayPack cashin method not available')
-      }
+      paymentResult = await paypack.cashin({
+        amount: payAmount,
+        number: formattedPhone,
+        mode: process.env.PAYPACK_MODE || 'live'
+      })
 
       console.log('PayPack payment result:', paymentResult)
+
+      if (!paymentResult?.success) {
+        await pool.query(
+          `INSERT INTO payments (
+            rental_id, amount, payment_date, method, status,
+            notes, created_by, invoice_id, error_message
+          ) VALUES (?, ?, NOW(), ?, 'failed', ?, ?, ?, ?)`,
+          [
+            invoice.rental_id,
+            payAmount,
+            method,
+            `Failed payment for invoice ${id}: ${paymentResult?.error || 'Paypack rejected cashin'}`,
+            req.user.id,
+            id,
+            paymentResult?.error || 'Paypack rejected cashin'
+          ]
+        )
+
+        return res.status(400).json({
+          success: false,
+          message: paymentResult?.error || 'Payment could not be started. Nothing was sent to the phone.',
+          details: paymentResult?.details
+        })
+      }
 
       // Record payment in database
       const [paymentInsert] = await pool.query(
@@ -258,7 +262,7 @@ router.post('/invoices/:id/pay', protect, allowRoles('renter'), async (req, res)
           invoice.rental_id, 
           payAmount, 
           method, 
-          paymentResult?.data?.ref || paymentResult?.ref || `MOCK_${Date.now()}`,
+          paymentResult.data.ref,
           `Payment for invoice ${id}`,
           req.user.id,
           id
@@ -280,13 +284,15 @@ router.post('/invoices/:id/pay', protect, allowRoles('renter'), async (req, res)
 
       res.json({
         success: true,
-        message: process.env.PAYPACK_MODE === 'sandbox' 
-          ? 'Sandbox payment initiated! (No real money deducted)' 
-          : 'Payment initiated! Check your phone to confirm.',
+        message:
+          paymentResult.sandbox || process.env.PAYPACK_MODE === 'sandbox'
+            ? 'Sandbox: no prompt is sent to the phone. Use live mode for a real MoMo confirmation.'
+            : 'Payment initiated! Check your phone to confirm.',
         payment_id: paymentInsert.insertId,
-        transaction_id: paymentResult?.data?.ref || paymentResult?.ref,
+        transaction_id: paymentResult.data.ref,
         remaining: newRemaining,
-        status: newStatus
+        status: newStatus,
+        sandbox: !!(paymentResult.sandbox || process.env.PAYPACK_MODE === 'sandbox')
       })
 
     } catch (error) {

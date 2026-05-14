@@ -1,5 +1,5 @@
 // backend/src/controllers/invoiceController.js
-import paypack from '../config/paypack.js'
+import paypack, { formatPhoneForPaypack } from '../config/paypack.js'
 import {
   createInvoice, getInvoiceById, getTenantInvoices,
   getLandlordInvoices, getInvoicePayments, createInvoicePayment,
@@ -203,14 +203,9 @@ export const payInvoice = async (req, res) => {
       return res.status(400).json({ message: `Amount exceeds remaining balance of RWF ${invoice.remaining}` })
     }
 
-    // Format phone number for Rwanda
-    let formattedPhone = phone.trim().replace(/\s+/g, '')
-    if (formattedPhone.startsWith('07')) {
-      formattedPhone = '250' + formattedPhone.slice(1)
-    } else if (formattedPhone.startsWith('+250')) {
-      formattedPhone = formattedPhone.slice(1)
-    } else if (formattedPhone.startsWith('7')) {
-      formattedPhone = '250' + formattedPhone
+    const formattedPhone = formatPhoneForPaypack(phone)
+    if (!formattedPhone) {
+      return res.status(400).json({ message: 'Enter a valid Rwanda mobile money number (e.g. 078… or 25078…).' })
     }
 
     // Create payment record
@@ -223,17 +218,14 @@ export const payInvoice = async (req, res) => {
 
     try {
       let paypackResponse = null
-      
-      // Use paypack.cashin method
+
       if (typeof paypack.cashin === 'function') {
         paypackResponse = await paypack.cashin({
           amount: parseFloat(amount),
           number: formattedPhone,
           mode: process.env.PAYPACK_MODE || 'live'
         })
-      } 
-      else {
-        // Fallback to mock response for testing
+      } else {
         console.log('Using mock payment response')
         paypackResponse = {
           success: true,
@@ -245,24 +237,35 @@ export const payInvoice = async (req, res) => {
         }
       }
 
-      console.log('✅ Payment initiated successfully')
-      console.log('   Response:', paypackResponse)
+      if (!paypackResponse?.success) {
+        await updateInvoicePaymentStatus(paymentId, 'failed', null)
+        return res.status(400).json({
+          message: paypackResponse?.error || 'Payment could not be started with the mobile money provider.',
+          details: paypackResponse?.details
+        })
+      }
 
-      await updateInvoicePaymentStatus(
-        paymentId,
-        'pending',
-        paypackResponse?.data?.ref || paypackResponse?.ref || `MOCK_${Date.now()}`
-      )
+      const paypackRef = paypackResponse.data?.ref || paypackResponse.ref
+      console.log('✅ Payment initiated, Paypack ref:', paypackRef)
+
+      await updateInvoicePaymentStatus(paymentId, 'pending', paypackRef)
 
       await logActivity(req.user.id, 'PAYMENT_INITIATED', `Initiated payment of RWF ${amount} for invoice #${invoice.id}`, 'payment', paymentId, req.ip)
 
+      const isSandbox = !!paypackResponse.sandbox || process.env.PAYPACK_MODE === 'sandbox'
+
       res.json({
-        message: 'Payment initiated! Check your phone to confirm the payment.',
+        message: isSandbox
+          ? 'Sandbox mode: no prompt is sent to your phone. Use live mode and valid Paypack keys for a real MoMo confirmation.'
+          : 'Payment initiated! Check your phone to confirm the payment.',
         payment_id: paymentId,
-        paypack_ref: paypackResponse?.data?.ref || paypackResponse?.ref,
+        paypack_ref: paypackRef,
         amount,
         phone: formattedPhone,
-        warning: process.env.PAYPACK_MODE === 'sandbox' ? 'This is a SANDBOX test - no real money will be deducted' : 'Real money will be deducted from your mobile money account upon confirmation.'
+        sandbox: isSandbox,
+        warning: isSandbox
+          ? 'Sandbox — no real charge and no carrier prompt.'
+          : 'Real money will be deducted from your mobile money account after you confirm on your phone.'
       })
     } catch (paypackErr) {
       console.error('❌ Paypack error:', paypackErr.message)
@@ -382,8 +385,12 @@ export const verifyPayment = async (req, res) => {
 
       if (typeof paypack.status === 'function') {
         const result = await paypack.status({ ref: payment.paypack_ref })
-        transactionStatus = result?.data?.status || result?.status
-        console.log('📊 Status from paypack:', transactionStatus)
+        if (result?.error) {
+          console.warn('Paypack status error:', result.error)
+        } else {
+          transactionStatus = result?.data?.status || result?.status
+          console.log('📊 Status from paypack:', transactionStatus)
+        }
       } else {
         transactionStatus = payment.status
       }

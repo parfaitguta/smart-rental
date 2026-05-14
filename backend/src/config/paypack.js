@@ -1,114 +1,181 @@
 // backend/src/config/paypack.js
 import dotenv from 'dotenv'
+import paypackImport from 'paypack-js'
 
 dotenv.config()
 
-const PAYPACK_BASE_URL = process.env.PAYPACK_BASE_URL || 'https://payments.paypack.rw/api'
+/** ESM interop: paypack-js exposes the class as default.default */
+const Paypack = paypackImport?.default?.default ?? paypackImport?.default ?? paypackImport
+
 const MODE = process.env.PAYPACK_MODE || 'live'
 
-// Create a simple HTTP client for Paypack
-const paypackClient = {
-  // Authentication
-  auth: async () => {
-    try {
-      const response = await fetch(`${PAYPACK_BASE_URL}/auth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id: process.env.PAYPACK_CLIENT_ID,
-          client_secret: process.env.PAYPACK_CLIENT_SECRET
-        })
-      })
-      return await response.json()
-    } catch (error) {
-      console.error('Auth error:', error)
-      return { error: error.message }
-    }
-  },
-  
-  // Initiate cashin (payment request)
-  cashin: async ({ amount, number, mode }) => {
-    console.log(`💰 Paying ${amount} RWF to ${number} in ${mode || MODE} mode`)
-    
-    try {
-      // For sandbox mode, return mock success
-      if (MODE === 'sandbox' || mode === 'sandbox') {
-        console.log('🔧 Sandbox mode - mock payment')
-        return {
-          success: true,
-          data: {
-            ref: `SANDBOX_${Date.now()}`,
-            status: 'pending',
-            amount: amount,
-            message: 'Sandbox test payment - no real money deducted'
-          }
-        }
-      }
-      
-      // First get auth token for live mode
-      const auth = await paypackClient.auth()
-      const token = auth?.data?.access_token || auth?.access_token
-      
-      const response = await fetch(`${PAYPACK_BASE_URL}/cashin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify({
-          amount: amount,
-          number: number,
-          mode: mode || MODE
-        })
-      })
-      
-      const result = await response.json()
-      console.log('Cashin response:', result)
-      return result
-    } catch (error) {
-      console.error('Cashin error:', error)
-      return { error: error.message }
-    }
-  },
-  
-  // Check transaction status
-  status: async ({ ref }) => {
-    try {
-      const auth = await paypackClient.auth()
-      const token = auth?.data?.access_token || auth?.access_token
-      
-      const response = await fetch(`${PAYPACK_BASE_URL}/cashin/status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify({ ref })
-      })
-      
-      return await response.json()
-    } catch (error) {
-      console.error('Status error:', error)
-      return { error: error.message }
-    }
-  },
-  
-  // Mock response for testing
-  mock: async ({ amount, number }) => {
-    console.log(`🔧 MOCK payment: ${amount} RWF to ${number}`)
+let merchantInstance = null
+
+function getMerchant () {
+  const id = process.env.PAYPACK_CLIENT_ID
+  const secret = process.env.PAYPACK_CLIENT_SECRET
+  if (!id || !secret) return null
+  if (!merchantInstance) {
+    merchantInstance = new Paypack({ client_id: id, client_secret: secret })
+  }
+  return merchantInstance
+}
+
+export function formatPhoneForPaypack (raw) {
+  if (!raw || typeof raw !== 'string') return ''
+  let n = raw.trim().replace(/\s+/g, '')
+  if (n.includes('@')) return ''
+  if (n.startsWith('07')) n = '250' + n.slice(1)
+  else if (n.startsWith('+250')) n = n.slice(1)
+  else if (n.startsWith('7') && !n.startsWith('250')) n = '250' + n
+  return n
+}
+
+function normalizeProviderError (err) {
+  if (!err) return 'Payment provider error'
+  if (typeof err === 'string') return err
+  const data = err.response?.data ?? err.data ?? err
+  if (typeof data === 'string') return data
+  if (data?.message && typeof data.message === 'string') return data.message
+  if (data?.error && typeof data.error === 'string') return data.error
+  if (err.message) return err.message
+  return 'Payment provider error'
+}
+
+/**
+ * Turn axios/SDK success payload into { success, data } or { success: false, error }.
+ */
+function normalizeCashinResponse (axiosRes) {
+  const body = axiosRes?.data !== undefined ? axiosRes.data : axiosRes
+  if (!body || typeof body !== 'object') {
+    return { success: false, error: 'Invalid response from payment provider' }
+  }
+  const ref =
+    body.ref ??
+    body.reference ??
+    body.transaction_ref ??
+    body.transaction?.ref ??
+    (body.data && (body.data.ref ?? body.data.reference))
+
+  if (body.success === false && !ref) {
     return {
-      success: true,
-      data: {
-        ref: `MOCK_${Date.now()}`,
-        status: 'successful',
-        amount: amount,
-        message: 'Mock payment successful'
-      }
+      success: false,
+      error: body.message || body.error || 'Payment was rejected by the provider',
+      details: body
+    }
+  }
+
+  if (!ref) {
+    return {
+      success: false,
+      error:
+        body.message ||
+        body.error ||
+        'No transaction reference was returned, so nothing was sent to the phone. Check Paypack credentials and the phone number.',
+      details: body
+    }
+  }
+
+  const status = body.status ?? body.state ?? body.data?.status ?? 'pending'
+  return {
+    success: true,
+    data: {
+      ref: String(ref),
+      status,
+      amount: body.amount
     }
   }
 }
 
-console.log('✅ PayPack client ready')
+const paypackClient = {
+  auth: async () => {
+    const m = getMerchant()
+    if (!m) {
+      return { ok: false, message: 'PAYPACK_CLIENT_ID and PAYPACK_CLIENT_SECRET are required' }
+    }
+    try {
+      const res = await m.me()
+      return { ok: true, data: res?.data ?? res }
+    } catch (e) {
+      return { ok: false, message: normalizeProviderError(e) }
+    }
+  },
+
+  cashin: async ({ amount, number, mode }) => {
+    const resolvedMode = mode || MODE
+    console.log(`💰 Paypack cashin ${amount} RWF → ${number} (${resolvedMode})`)
+
+    if (MODE === 'sandbox' || resolvedMode === 'sandbox') {
+      return {
+        success: true,
+        sandbox: true,
+        data: {
+          ref: `SANDBOX_${Date.now()}`,
+          status: 'pending',
+          amount,
+          message: 'Sandbox: no real prompt is sent to the phone'
+        }
+      }
+    }
+
+    const merchant = getMerchant()
+    if (!merchant) {
+      return {
+        success: false,
+        error:
+          'Mobile money is not configured. Set PAYPACK_CLIENT_ID and PAYPACK_CLIENT_SECRET in the environment.'
+      }
+    }
+
+    const num = typeof number === 'string' ? number : String(number)
+    try {
+      const webhookEnv =
+        resolvedMode && resolvedMode !== 'live' ? resolvedMode : process.env.PAYPACK_WEBHOOK_ENV || null
+
+      const res = await merchant.cashin({
+        amount: Number(amount),
+        number: num,
+        environment: webhookEnv || undefined
+      })
+
+      const normalized = normalizeCashinResponse(res)
+      if (!normalized.success) {
+        console.error('❌ Cashin rejected:', normalized.error)
+      } else {
+        console.log('✅ Cashin accepted, ref:', normalized.data.ref)
+      }
+      return normalized
+    } catch (e) {
+      const msg = normalizeProviderError(e)
+      console.error('❌ Cashin error:', msg)
+      return { success: false, error: msg, details: e?.response?.data }
+    }
+  },
+
+  status: async ({ ref }) => {
+    if (!ref) return { error: 'ref is required' }
+    const merchant = getMerchant()
+    if (!merchant) return { error: 'Paypack not configured' }
+    try {
+      const res = await merchant.transaction(ref)
+      return res?.data ?? res
+    } catch (e) {
+      return { error: normalizeProviderError(e), details: e?.response?.data }
+    }
+  },
+
+  mock: async ({ amount, number }) => ({
+    success: true,
+    data: {
+      ref: `MOCK_${Date.now()}`,
+      status: 'pending',
+      amount,
+      message: 'Mock payment'
+    }
+  })
+}
+
+console.log('✅ PayPack client ready (official paypack-js)')
 console.log('📦 Mode:', MODE)
 
 export default paypackClient
