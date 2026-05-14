@@ -180,11 +180,25 @@ export default function MyInvoices() {
     setSubmitting(true)
     try {
       const token = getToken()
-      await axios.post(
+      
+      console.log('Sending payment request:', {
+        url: `${API_BASE_URL}/invoices/${selectedInvoice.id}/pay`,
+        data: payForm
+      })
+      
+      const response = await axios.post(
         `${API_BASE_URL}/invoices/${selectedInvoice.id}/pay`,
         payForm,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       )
+      
+      console.log('Payment response:', response.data)
+      
       toast.success('Payment initiated! Check your phone to confirm.', { duration: 5000 })
       setShowPayModal(false)
       setPayForm({ amount: '', phone: '', method: 'mtn_momo' })
@@ -193,7 +207,12 @@ export default function MyInvoices() {
         fetchInvoiceDetail(selectedInvoice.id)
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Payment failed')
+      console.error('Payment error - Full error:', error)
+      console.error('Error response data:', error.response?.data)
+      console.error('Error status:', error.response?.status)
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Payment failed'
+      toast.error(`Payment failed: ${errorMessage}`)
     } finally {
       setSubmitting(false)
     }
@@ -575,7 +594,12 @@ export default function MyInvoices() {
       {showPayModal && selectedInvoice && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-2 text-center">Pay Invoice</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Pay Invoice</h2>
+              <button onClick={() => setShowPayModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
             <p className="text-sm text-gray-500 text-center mb-4">
               {selectedInvoice.month_year} - Remaining: {formatCurrency(selectedInvoice.remaining)}
             </p>
@@ -608,7 +632,7 @@ export default function MyInvoices() {
                 <button
                   onClick={() => setPayForm({ ...payForm, method: 'mtn_momo' })}
                   className={`flex-1 py-2 rounded-lg border ${
-                    payForm.method === 'mtn_momo' ? 'bg-yellow-400 border-yellow-500' : 'border-gray-300'
+                    payForm.method === 'mtn_momo' ? 'bg-yellow-400 border-yellow-500 text-yellow-900' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
                   📱 MTN MoMo
@@ -616,7 +640,7 @@ export default function MyInvoices() {
                 <button
                   onClick={() => setPayForm({ ...payForm, method: 'airtel_money' })}
                   className={`flex-1 py-2 rounded-lg border ${
-                    payForm.method === 'airtel_money' ? 'bg-red-500 border-red-600 text-white' : 'border-gray-300'
+                    payForm.method === 'airtel_money' ? 'bg-red-500 border-red-600 text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
                   📱 Airtel Money
@@ -627,13 +651,21 @@ export default function MyInvoices() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
               <p className="text-red-700 text-xs font-medium">⚠️ REAL PAYMENT WARNING</p>
               <p className="text-red-600 text-xs">Real money will be deducted from your mobile money account.</p>
+              <p className="text-red-500 text-xs mt-1">Make sure you have sufficient balance.</p>
             </div>
 
             <div className="flex gap-3">
-              <button onClick={() => setShowPayModal(false)} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg">
+              <button
+                onClick={() => setShowPayModal(false)}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg"
+              >
                 Cancel
               </button>
-              <button onClick={onPayInvoice} disabled={submitting} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg disabled:opacity-50">
+              <button
+                onClick={onPayInvoice}
+                disabled={submitting}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg disabled:opacity-50"
+              >
                 {submitting ? 'Processing...' : `Pay ${formatCurrency(payForm.amount || 0)}`}
               </button>
             </div>

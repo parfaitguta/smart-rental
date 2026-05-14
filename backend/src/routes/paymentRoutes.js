@@ -87,6 +87,243 @@ router.post('/', protect, allowRoles('landlord', 'admin'), recordPayment)
  */
 router.post('/renter-pay', protect, allowRoles('renter'), renterMakePayment)
 
+// DEBUG: Check paypack methods
+router.get('/debug-paypack', async (req, res) => {
+  try {
+    const paypackModule = await import('../config/paypack.js')
+    const paypack = paypackModule.default
+    
+    res.json({
+      methods: Object.keys(paypack),
+      has_cashin: typeof paypack.cashin === 'function',
+      has_auth: typeof paypack.auth === 'function',
+      has_status: typeof paypack.status === 'function',
+      mode: process.env.PAYPACK_MODE || 'live'
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+/**
+ * @swagger
+ * /api/payments/invoices/{id}/pay:
+ *   post:
+ *     summary: Pay an invoice directly (renter only)
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Invoice ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *               - phone
+ *               - method
+ *             properties:
+ *               amount:
+ *                 type: number
+ *                 example: 150000
+ *               phone:
+ *                 type: string
+ *                 example: "0788888888"
+ *               method:
+ *                 type: string
+ *                 enum: [mtn_momo, airtel_money]
+ *                 example: mtn_momo
+ *     responses:
+ *       200:
+ *         description: Payment initiated successfully
+ *       400:
+ *         description: Payment failed
+ *       404:
+ *         description: Invoice not found
+ */
+router.post('/invoices/:id/pay', protect, allowRoles('renter'), async (req, res) => {
+  try {
+    const { id } = req.params
+    const { amount, phone, method } = req.body
+
+    console.log(`Processing payment for invoice ${id} by user ${req.user.id}`)
+
+    // Get invoice details with rental and property information
+    const [invoices] = await pool.query(
+      `SELECT 
+        i.*, 
+        r.id as rental_id, 
+        r.landlord_id,
+        r.property_id,
+        p.title as property_title,
+        p.landlord_id as property_landlord_id,
+        u.full_name as landlord_name,
+        u.phone as landlord_phone
+       FROM invoices i 
+       JOIN rentals r ON i.rental_id = r.id 
+       JOIN properties p ON r.property_id = p.id
+       JOIN users u ON p.landlord_id = u.id
+       WHERE i.id = ? AND i.tenant_id = ?`,
+      [id, req.user.id]
+    )
+
+    if (invoices.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Invoice not found or you are not authorized to pay this invoice' 
+      })
+    }
+
+    const invoice = invoices[0]
+
+    if (invoice.status === 'paid') {
+      return res.status(400).json({ success: false, message: 'Invoice is already paid' })
+    }
+
+    if (invoice.status === 'cancelled') {
+      return res.status(400).json({ success: false, message: 'Invoice has been cancelled' })
+    }
+
+    const remainingAmount = parseFloat(invoice.remaining) || (invoice.amount - invoice.amount_paid)
+    const payAmount = amount || remainingAmount
+
+    if (payAmount > remainingAmount) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Amount cannot exceed remaining balance of ${remainingAmount}` 
+      })
+    }
+
+    // Format phone number
+    let formattedPhone = phone.trim().replace(/\s+/g, '')
+    if (formattedPhone.startsWith('07')) {
+      formattedPhone = '250' + formattedPhone.slice(1)
+    } else if (formattedPhone.startsWith('+250')) {
+      formattedPhone = formattedPhone.slice(1)
+    }
+
+    console.log(`Processing ${method} payment of ${payAmount} from phone ${formattedPhone}`)
+
+    // Process payment via PayPack
+    let paymentResult = null
+    let paypack = null
+
+    try {
+      const paypackModule = await import('../config/paypack.js')
+      paypack = paypackModule.default
+      
+      console.log('Paypack methods available:', Object.keys(paypack))
+
+      // Try to use cashin method
+      if (typeof paypack.cashin === 'function') {
+        paymentResult = await paypack.cashin({
+          amount: payAmount,
+          number: formattedPhone,
+          mode: process.env.PAYPACK_MODE || 'live'
+        })
+      } 
+      // If cashin not available, use mock for sandbox
+      else if (process.env.PAYPACK_MODE === 'sandbox') {
+        console.log('Using sandbox mock payment')
+        paymentResult = {
+          success: true,
+          data: {
+            ref: `SANDBOX_${Date.now()}`,
+            status: 'pending',
+            amount: payAmount
+          }
+        }
+      }
+      else {
+        throw new Error('PayPack cashin method not available')
+      }
+
+      console.log('PayPack payment result:', paymentResult)
+
+      // Record payment in database
+      const [paymentInsert] = await pool.query(
+        `INSERT INTO payments (
+          rental_id, amount, payment_date, method, status, 
+          reference_id, notes, created_by, invoice_id
+        ) VALUES (?, ?, NOW(), ?, 'pending', ?, ?, ?, ?)`,
+        [
+          invoice.rental_id, 
+          payAmount, 
+          method, 
+          paymentResult?.data?.ref || paymentResult?.ref || `MOCK_${Date.now()}`,
+          `Payment for invoice ${id}`,
+          req.user.id,
+          id
+        ]
+      )
+
+      // Update invoice amount paid and remaining
+      const newAmountPaid = parseFloat(invoice.amount_paid || 0) + payAmount
+      const newRemaining = invoice.amount - newAmountPaid
+      const newStatus = newAmountPaid >= invoice.amount ? 'paid' : 
+                        newAmountPaid > 0 ? 'partial' : 'unpaid'
+
+      await pool.query(
+        `UPDATE invoices 
+         SET amount_paid = ?, remaining = ?, status = ? 
+         WHERE id = ?`,
+        [newAmountPaid, newRemaining, newStatus, id]
+      )
+
+      res.json({
+        success: true,
+        message: process.env.PAYPACK_MODE === 'sandbox' 
+          ? 'Sandbox payment initiated! (No real money deducted)' 
+          : 'Payment initiated! Check your phone to confirm.',
+        payment_id: paymentInsert.insertId,
+        transaction_id: paymentResult?.data?.ref || paymentResult?.ref,
+        remaining: newRemaining,
+        status: newStatus
+      })
+
+    } catch (error) {
+      console.error('PayPack payment error:', error)
+      
+      await pool.query(
+        `INSERT INTO payments (
+          rental_id, amount, payment_date, method, status, 
+          notes, created_by, invoice_id, error_message
+        ) VALUES (?, ?, NOW(), ?, 'failed', ?, ?, ?, ?)`,
+        [
+          invoice.rental_id,
+          payAmount,
+          method,
+          `Failed payment for invoice ${id}: ${error.message}`,
+          req.user.id,
+          id,
+          error.message
+        ]
+      )
+
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Payment failed. Please try again.'
+      })
+    }
+
+  } catch (error) {
+    console.error('Payment route error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Server error processing payment',
+      error: error.message
+    })
+  }
+})
+
 /**
  * @swagger
  * /api/payments/summary:
