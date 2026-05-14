@@ -18,8 +18,10 @@ export default function Register() {
     setLoading(true)
     try {
       await registerUser(form)
+      const email = form.email.trim()
+      sessionStorage.setItem('verifyOtpEmail', email)
       toast.success('Account created! Check your email for the OTP.')
-      navigate('/verify-otp', { state: { email: form.email } })
+      navigate('/verify-otp', { state: { email } })
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed')
     } finally {

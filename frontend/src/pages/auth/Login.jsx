@@ -79,7 +79,9 @@ export default function Login() {
     } catch (err) {
       if (err.response?.data?.needsVerification) {
         toast.error('Please verify your account first')
-        navigate('/verify-otp', { state: { email: form.email } })
+        const email = form.email.trim()
+        sessionStorage.setItem('verifyOtpEmail', email)
+        navigate('/verify-otp', { state: { email } })
       } else {
         const errorMessage = err.response?.data?.message || 'Login failed'
         setError(errorMessage)

@@ -21,7 +21,8 @@
     "no": "Non",
     "ok": "OK",
     "success": "Succès",
-    "error": "Erreur"
+    "error": "Erreur",
+    "messages": "Messages"
   },
   "auth": {
     "welcome": "Bienvenue",

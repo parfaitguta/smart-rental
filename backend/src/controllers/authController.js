@@ -17,9 +17,12 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
+const normalizeEmail = (value) => String(value ?? '').trim()
+
 export const register = async (req, res) => {
   try {
-    const { full_name, email, phone, password, role } = req.body
+    const { full_name, phone, password, role } = req.body
+    const email = normalizeEmail(req.body.email)
 
     if (!full_name || !email || !phone || !password || !role) {
       return res.status(400).json({ message: 'All fields are required' })
@@ -32,13 +35,12 @@ export const register = async (req, res) => {
 
     const password_hash = await bcrypt.hash(password, 12)
     const otp = generateOTP()
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000)
 
     const userId = await createUser({ full_name, email, phone, password_hash, role })
 
     await pool.query(
-      'UPDATE users SET otp_code = ?, otp_expires = ?, is_verified = FALSE WHERE id = ?',
-      [otp, otpExpires, userId]
+      'UPDATE users SET otp_code = ?, otp_expires = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 10 MINUTE), is_verified = FALSE WHERE id = ?',
+      [otp, userId]
     )
 
     try {
@@ -46,6 +48,11 @@ export const register = async (req, res) => {
       console.log(`✅ OTP sent to ${email} — Code: ${otp}`)
     } catch (emailError) {
       console.error('❌ OTP email failed:', emailError.message)
+      await pool.query('DELETE FROM users WHERE id = ?', [userId])
+      return res.status(503).json({
+        message:
+          'We could not send the verification email. Please try again in a few minutes, or check that email is configured on the server.'
+      })
     }
 
     await LOG.register(userId, req.ip)
@@ -62,14 +69,15 @@ export const register = async (req, res) => {
 
 export const verifyOTP = async (req, res) => {
   try {
-    const { email, otp } = req.body
+    const email = normalizeEmail(req.body.email)
+    const otp = String(req.body.otp ?? '').trim()
 
     if (!email || !otp) {
       return res.status(400).json({ message: 'Email and OTP are required' })
     }
 
     const [users] = await pool.query(
-      'SELECT * FROM users WHERE email = ? AND otp_code = ? AND otp_expires > NOW()',
+      'SELECT * FROM users WHERE email = ? AND otp_code = ? AND otp_expires > UTC_TIMESTAMP()',
       [email, otp]
     )
 
@@ -93,7 +101,7 @@ export const verifyOTP = async (req, res) => {
 
 export const resendOTP = async (req, res) => {
   try {
-    const { email } = req.body
+    const email = normalizeEmail(req.body.email)
 
     if (!email) {
       return res.status(400).json({ message: 'Email is required' })
@@ -107,12 +115,13 @@ export const resendOTP = async (req, res) => {
       return res.status(400).json({ message: 'Account is already verified' })
     }
 
+    const prevCode = user.otp_code
+    const prevExpires = user.otp_expires
     const otp = generateOTP()
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000)
 
     await pool.query(
-      'UPDATE users SET otp_code = ?, otp_expires = ? WHERE id = ?',
-      [otp, otpExpires, user.id]
+      'UPDATE users SET otp_code = ?, otp_expires = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 10 MINUTE) WHERE id = ?',
+      [otp, user.id]
     )
 
     try {
@@ -120,6 +129,14 @@ export const resendOTP = async (req, res) => {
       console.log(`✅ OTP resent to ${email} — Code: ${otp}`)
     } catch (emailError) {
       console.error('❌ Resend OTP failed:', emailError.message)
+      await pool.query(
+        'UPDATE users SET otp_code = ?, otp_expires = ? WHERE id = ?',
+        [prevCode, prevExpires, user.id]
+      )
+      return res.status(503).json({
+        message:
+          'We could not send the email. Please try again in a few minutes, or check that email is configured on the server.'
+      })
     }
 
     res.json({ message: 'New OTP sent to your email' })
@@ -130,7 +147,8 @@ export const resendOTP = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { password } = req.body
+    const email = normalizeEmail(req.body.email)
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' })
@@ -175,7 +193,7 @@ export const login = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body
+    const email = normalizeEmail(req.body.email)
     if (!email) {
       return res.status(400).json({ message: 'Email is required' })
     }

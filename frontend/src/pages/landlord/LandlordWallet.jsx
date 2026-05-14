@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import toast from 'react-hot-toast'
-import { Wallet, TrendingUp, TrendingDown, History, CreditCard, Phone, ArrowUpRight, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, History, CreditCard, Phone, ArrowUpRight, CheckCircle, XCircle, Clock, X } from 'lucide-react'
 import { formatCurrency } from '../../utils/helpers'
 
 export default function LandlordWallet() {
@@ -32,8 +32,9 @@ export default function LandlordWallet() {
         api.get('/wallet/withdrawals')
       ])
       setWallet(balanceRes.data)
-      setTransactions(transactionsRes.data.transactions)
-      setWithdrawals(withdrawalsRes.data.withdrawals)
+      setTransactions(transactionsRes.data.transactions || [])
+      setWithdrawals(withdrawalsRes.data.withdrawals || [])
+      console.log('Wallet balance:', balanceRes.data.balance)
     } catch (error) {
       console.error('Error fetching wallet data:', error)
       toast.error('Failed to load wallet data')
@@ -44,23 +45,23 @@ export default function LandlordWallet() {
 
   const handleWithdraw = async (e) => {
     e.preventDefault()
-    
+
     const amount = parseFloat(withdrawAmount)
     if (isNaN(amount) || amount <= 0) {
       toast.error('Please enter a valid amount')
       return
     }
-    
+
     if (amount > wallet?.balance) {
       toast.error(`Insufficient balance. Maximum withdrawal: ${formatCurrency(wallet?.balance)}`)
       return
     }
-    
+
     if (!withdrawPhone || withdrawPhone.length < 10) {
-      toast.error('Please enter a valid phone number')
+      toast.error('Please enter a valid phone number (e.g., 0788888888)')
       return
     }
-    
+
     setSubmitting(true)
     try {
       const response = await api.post('/wallet/withdraw', {
@@ -68,7 +69,7 @@ export default function LandlordWallet() {
         phone: withdrawPhone,
         method: withdrawMethod
       })
-      
+
       if (response.data.success) {
         toast.success('Withdrawal request submitted successfully!')
         setShowWithdrawModal(false)
@@ -91,8 +92,10 @@ export default function LandlordWallet() {
         return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"><Clock size={12} /> Pending</span>
       case 'processing':
         return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">Processing</span>
+      case 'failed':
+        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"><XCircle size={12} /> Failed</span>
       case 'cancelled':
-        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"><XCircle size={12} /> Cancelled</span>
+        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"><XCircle size={12} /> Cancelled</span>
       default:
         return <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{status}</span>
     }
@@ -131,10 +134,17 @@ export default function LandlordWallet() {
             <button
               onClick={() => setShowWithdrawModal(true)}
               disabled={!wallet?.balance || wallet.balance <= 0}
-              className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`mt-4 w-full py-2 rounded-lg text-sm font-medium transition ${
+                !wallet?.balance || wallet.balance <= 0
+                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
             >
               Withdraw Funds
             </button>
+            {(!wallet?.balance || wallet.balance <= 0) && (
+              <p className="text-xs text-center text-gray-400 mt-2">Add balance by receiving rent payments</p>
+            )}
           </div>
 
           <div className={`${cardBgClass} rounded-xl shadow-sm p-6 border ${borderClass}`}>
@@ -225,7 +235,7 @@ export default function LandlordWallet() {
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-xl font-bold ${textColorClass}`}>Withdraw Funds</h2>
               <button onClick={() => setShowWithdrawModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={24} />
+                ✕
               </button>
             </div>
 
@@ -243,7 +253,10 @@ export default function LandlordWallet() {
                   placeholder="Enter amount"
                   className={`w-full ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500`}
                   required
+                  min="1"
+                  max={wallet?.balance}
                 />
+                <p className="text-xs text-gray-400 mt-1">Min: RWF 100 | Max: {formatCurrency(wallet?.balance)}</p>
               </div>
 
               <div className="mb-4">
@@ -256,6 +269,7 @@ export default function LandlordWallet() {
                   className={`w-full ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500`}
                   required
                 />
+                <p className="text-xs text-gray-400 mt-1">Enter MTN or Airtel registered phone number</p>
               </div>
 
               <div className="mb-4">
@@ -286,6 +300,12 @@ export default function LandlordWallet() {
                 </div>
               </div>
 
+              <div className="bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-lg mb-4">
+                <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                  ⚠️ Withdrawal requests are processed within 24 hours. Money will be sent to your mobile money.
+                </p>
+              </div>
+
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -309,11 +329,3 @@ export default function LandlordWallet() {
     </div>
   )
 }
-
-// Helper component
-const X = ({ size, className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-)

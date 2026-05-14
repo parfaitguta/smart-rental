@@ -99,6 +99,8 @@ export default function Navbar() {
           { name: t('nav.rentals'), path: '/landlord/rentals', icon: '📄' },
           { name: t('nav.tenants'), path: '/landlord/tenants', icon: '👥' },
           { name: t('nav.payments'), path: '/landlord/payments', icon: '💰' },
+          { name: 'Wallet', path: '/landlord/wallet', icon: '💰' },
+          { name: t('nav.messages'), path: '/messages', icon: '💬' },
         ]
       case 'renter':
         return [
@@ -231,23 +233,6 @@ export default function Navbar() {
                   <span>{item.name}</span>
                 </Link>
               ))}
-              
-              <Link
-                to="/messages"
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors relative ${
-                  location.pathname === '/messages'
-                    ? `${activeBgClass} ${textColorClass}`
-                    : `${textColorClass} ${hoverBgClass}`
-                }`}
-              >
-                <MessageSquare size={18} />
-                <span>{t('common.messages')}</span>
-                {unreadMessages > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {unreadMessages > 9 ? '9+' : unreadMessages}
-                  </span>
-                )}
-              </Link>
             </div>
           </div>
           
@@ -383,24 +368,6 @@ export default function Navbar() {
                   <span>{item.name}</span>
                 </Link>
               ))}
-
-              <Link
-                to="/messages"
-                onClick={() => setShowMobileMenu(false)}
-                className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-colors relative ${
-                  location.pathname === '/messages'
-                    ? `${activeBgClass} ${textColorClass}`
-                    : `${textColorClass} ${hoverBgClass}`
-                }`}
-              >
-                <MessageSquare size={18} />
-                <span>{t('common.messages')}</span>
-                {unreadMessages > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {unreadMessages > 9 ? '9+' : unreadMessages}
-                  </span>
-                )}
-              </Link>
 
               <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-blue-700'} mt-2 pt-2`}>
                 <Link

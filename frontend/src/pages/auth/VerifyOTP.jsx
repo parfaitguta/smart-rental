@@ -1,10 +1,23 @@
-// frontend/src/pages/auth/VerifyOTP.jsx - FIXED VERSION
+// frontend/src/pages/auth/VerifyOTP.jsx
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import api from '../../api/axios'  // ✅ Use the configured api instance
+import api from '../../api/axios'
 import toast from 'react-hot-toast'
 import { ShieldCheck, RefreshCw } from 'lucide-react'
+
+const VERIFY_EMAIL_KEY = 'verifyOtpEmail'
+
+function readEmailFromStateOrStorage(location) {
+  const fromState = location.state?.email
+  if (fromState != null && String(fromState).trim()) {
+    const e = String(fromState).trim()
+    sessionStorage.setItem(VERIFY_EMAIL_KEY, e)
+    return e
+  }
+  const stored = sessionStorage.getItem(VERIFY_EMAIL_KEY)
+  return stored ? stored.trim() : ''
+}
 
 export default function VerifyOTP() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -15,7 +28,12 @@ export default function VerifyOTP() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const email = location.state?.email || ''
+  const [email, setEmail] = useState(() => readEmailFromStateOrStorage(location))
+
+  useEffect(() => {
+    const next = readEmailFromStateOrStorage(location)
+    if (next) setEmail(next)
+  }, [location.state, location.key])
 
   useEffect(() => {
     if (!email) navigate('/register')
@@ -59,10 +77,11 @@ export default function VerifyOTP() {
     }
     setLoading(true)
     try {
-      // ✅ Use api instance (automatically uses correct base URL)
       const res = await api.post('/auth/verify-otp', {
-        email, otp: otpCode
+        email,
+        otp: otpCode
       })
+      sessionStorage.removeItem(VERIFY_EMAIL_KEY)
       login(res.data.token, res.data.user)
       toast.success('Account verified! Welcome!')
       const role = res.data.user.role
@@ -81,7 +100,6 @@ export default function VerifyOTP() {
   const handleResend = async () => {
     setResending(true)
     try {
-      // ✅ Use api instance
       await api.post('/auth/resend-otp', { email })
       toast.success('New OTP sent to your email!')
       setCountdown(60)
@@ -157,7 +175,13 @@ export default function VerifyOTP() {
 
         <p className="mt-4 text-center text-sm text-gray-500">
           Wrong email?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">Go back</Link>
+          <Link
+            to="/register"
+            className="text-blue-600 hover:underline"
+            onClick={() => sessionStorage.removeItem(VERIFY_EMAIL_KEY)}
+          >
+            Go back
+          </Link>
         </p>
       </div>
     </div>

@@ -21,7 +21,8 @@
     "no": "Oya",
     "ok": "Sawa",
     "success": "Byagenze neza",
-    "error": "Habaye ikibazo"
+    "error": "Habaye ikibazo",
+    "messages": "Ubutumwa"
   },
   "auth": {
     "welcome": "Murakaza neza",
