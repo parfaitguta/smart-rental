@@ -49,6 +49,7 @@ import AdminProperties from './pages/admin/AdminProperties';
 import AdminActivity from './pages/admin/AdminActivity';
 import AdminReports from './pages/admin/AdminReports';
 import SystemSettings from './pages/admin/SystemSettings';
+import AdminWithdrawals from './pages/admin/AdminWithdrawals';  // ADD THIS
 
 // Layout wrapper component
 const PageLayout = ({ children }) => {
@@ -112,13 +113,13 @@ function App() {
             <Route path="/verify-otp" element={<VerifyOTP />} />
 
             {/* Home Route */}
-            <Route 
-              path="/" 
+            <Route
+              path="/"
               element={
-                isAuthenticated() ? 
-                  <Navigate to={getDashboardRoute()} replace /> : 
+                isAuthenticated() ?
+                  <Navigate to={getDashboardRoute()} replace /> :
                   <HomePage />
-              } 
+              }
             />
 
             {/* Protected Routes with Layout */}
@@ -345,6 +346,15 @@ function App() {
               <ProtectedRoute allowedRoles={['admin']}>
                 <PageLayout>
                   <SystemSettings />
+                </PageLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* ADD THIS ADMIN WITHDRAWALS ROUTE */}
+            <Route path="/admin/withdrawals" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <PageLayout>
+                  <AdminWithdrawals />
                 </PageLayout>
               </ProtectedRoute>
             } />

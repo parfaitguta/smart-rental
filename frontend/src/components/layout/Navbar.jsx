@@ -18,7 +18,6 @@ export default function Navbar() {
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [darkMode, setDarkMode] = useState(false)
 
-  // Check dark mode on component mount
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('darkMode') === 'true'
     setDarkMode(savedDarkMode)
@@ -44,7 +43,6 @@ export default function Navbar() {
     applyTheme(newDarkMode)
   }
 
-  // Fetch unread messages count
   useEffect(() => {
     if (!user) return
     const fetchUnread = async () => {
@@ -81,7 +79,6 @@ export default function Navbar() {
     return user.full_name.charAt(0).toUpperCase()
   }
 
-  // Get navigation items based on user role
   const getNavItems = () => {
     if (!user) return []
     
@@ -93,6 +90,7 @@ export default function Navbar() {
           { name: t('nav.properties'), path: '/admin/properties', icon: '🏠' },
           { name: t('nav.reports'), path: '/admin/reports', icon: '📈' },
           { name: t('nav.settings'), path: '/admin/settings', icon: '⚙️' },
+          { name: 'Withdrawals', path: '/admin/withdrawals', icon: '💰' },
         ]
       case 'landlord':
         return [
@@ -101,7 +99,6 @@ export default function Navbar() {
           { name: t('nav.rentals'), path: '/landlord/rentals', icon: '📄' },
           { name: t('nav.tenants'), path: '/landlord/tenants', icon: '👥' },
           { name: t('nav.payments'), path: '/landlord/payments', icon: '💰' },
-          { name: 'Wallet', path: '/landlord/wallet', icon: '💰' },
         ]
       case 'renter':
         return [
@@ -133,7 +130,6 @@ export default function Navbar() {
     }
   }, [showProfileMenu])
 
-  // Navbar classes based on dark mode
   const navbarBgClass = darkMode 
     ? 'bg-gray-900 border-gray-800' 
     : 'bg-gradient-to-r from-blue-900 to-black border-blue-800'
@@ -155,7 +151,6 @@ export default function Navbar() {
           </Link>
           
           <div className="flex items-center gap-3">
-            {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
               className={`p-2 rounded-lg transition-colors ${
@@ -237,7 +232,6 @@ export default function Navbar() {
                 </Link>
               ))}
               
-              {/* Messages Link with Unread Badge */}
               <Link
                 to="/messages"
                 className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors relative ${
@@ -258,7 +252,6 @@ export default function Navbar() {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
               className={`p-2 rounded-lg transition-colors ${
@@ -271,7 +264,6 @@ export default function Navbar() {
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            {/* Language Selector */}
             <div className="relative">
               <button
                 onClick={() => setShowLanguageMenu(!showLanguageMenu)}
@@ -300,7 +292,6 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Profile Avatar Dropdown */}
             <div className="relative">
               <button
                 onClick={(e) => {
@@ -365,7 +356,6 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Mobile menu button */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
               className={`lg:hidden p-2 rounded-lg ${hoverBgClass} ${textColorClass}`}
@@ -375,7 +365,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Navigation Links */}
         {showMobileMenu && (
           <div className={`lg:hidden mt-4 pt-4 border-t ${darkMode ? 'border-gray-700' : 'border-blue-800'}`}>
             <div className="flex flex-col gap-2">
@@ -395,7 +384,6 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              {/* Messages Link in Mobile Menu */}
               <Link
                 to="/messages"
                 onClick={() => setShowMobileMenu(false)}

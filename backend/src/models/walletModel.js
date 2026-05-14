@@ -1,5 +1,6 @@
 // backend/src/models/walletModel.js
 import pool from '../config/db.js'
+import paypack from '../config/paypack.js'
 
 // Get or create landlord wallet
 export const getOrCreateWallet = async (landlordId) => {
@@ -159,7 +160,18 @@ export const getTransactionHistory = async (landlordId, limit = 50) => {
   }
 }
 
-// Process withdrawal (admin only) - approve or reject
+// Helper to format phone for PayPack
+const formatPhoneForPaypack = (raw) => {
+  if (!raw || typeof raw !== 'string') return ''
+  let n = raw.trim().replace(/\s+/g, '')
+  if (n.includes('@')) return ''
+  if (n.startsWith('07')) n = '250' + n.slice(1)
+  else if (n.startsWith('+250')) n = n.slice(1)
+  else if (n.startsWith('7') && !n.startsWith('250')) n = '250' + n
+  return n
+}
+
+// Process withdrawal (admin only) - WITH PAYPACK CASEOUT
 export const processWithdrawal = async (requestId, status, adminId) => {
   try {
     const [request] = await pool.query(
@@ -178,15 +190,108 @@ export const processWithdrawal = async (requestId, status, adminId) => {
     await connection.beginTransaction()
 
     try {
-      await connection.query(
-        `UPDATE withdrawal_requests
-         SET status = ?, processed_by = ?, processed_at = NOW()
-         WHERE id = ?`,
-        [status, adminId, requestId]
-      )
+      if (status === 'completed') {
+        // Format phone number for PayPack
+        const formattedPhone = formatPhoneForPaypack(withdrawal.phone)
+        
+        if (!formattedPhone) {
+          throw new Error('Invalid phone number format')
+        }
 
-      // If rejected, add balance back
-      if (status === 'cancelled' || status === 'failed') {
+        console.log(`💰 Processing PayPack cashout: ${withdrawal.amount} RWF to ${formattedPhone}`)
+
+        // Send money via PayPack cashout
+        let cashoutResult = null
+        let cashoutError = null
+
+        try {
+          // Check if paypack has cashout method
+          if (typeof paypack.cashout === 'function') {
+            cashoutResult = await paypack.cashout({
+              amount: parseFloat(withdrawal.amount),
+              number: formattedPhone,
+              mode: process.env.PAYPACK_MODE === 'sandbox' ? 'sandbox' : 'live'
+            })
+          } 
+          // If no cashout method, try using cashin with negative amount? (not recommended)
+          else if (process.env.PAYPACK_MODE === 'sandbox') {
+            console.log('🔧 Sandbox mode - mock cashout')
+            cashoutResult = {
+              success: true,
+              sandbox: true,
+              data: {
+                ref: `SANDBOX_CASHOUT_${Date.now()}`,
+                status: 'successful',
+                amount: withdrawal.amount
+              }
+            }
+          }
+          else {
+            throw new Error('PayPack cashout method not available')
+          }
+
+          console.log('Cashout result:', cashoutResult)
+
+          if (cashoutResult?.success === false) {
+            throw new Error(cashoutResult.error || 'Cashout failed')
+          }
+
+          const reference = cashoutResult?.data?.ref || cashoutResult?.ref || `CASHOUT_${Date.now()}`
+
+          // Update withdrawal request with reference
+          await connection.query(
+            `UPDATE withdrawal_requests
+             SET status = ?, processed_by = ?, processed_at = NOW(), reference = ?
+             WHERE id = ?`,
+            ['completed', adminId, reference, requestId]
+          )
+
+          // Record successful cashout transaction
+          await connection.query(
+            `INSERT INTO payment_transactions (landlord_id, type, amount, description, reference_id, status)
+             VALUES (?, 'withdrawal', ?, ?, ?, 'completed')`,
+            [withdrawal.landlord_id, withdrawal.amount, `Cashout sent to ${withdrawal.phone}`, reference]
+          )
+
+        } catch (paypackError) {
+          console.error('❌ PayPack cashout failed:', paypackError.message)
+          cashoutError = paypackError.message
+
+          // Mark withdrawal as failed
+          await connection.query(
+            `UPDATE withdrawal_requests
+             SET status = 'failed', processed_by = ?, processed_at = NOW(), notes = ?
+             WHERE id = ?`,
+            [adminId, `Cashout failed: ${paypackError.message}`, requestId]
+          )
+
+          // Return balance to landlord
+          await connection.query(
+            `UPDATE landlord_wallet 
+             SET balance = balance + ?, total_withdrawn = total_withdrawn - ?
+             WHERE landlord_id = ?`,
+            [withdrawal.amount, withdrawal.amount, withdrawal.landlord_id]
+          )
+
+          await connection.query(
+            `INSERT INTO payment_transactions (landlord_id, type, amount, description, status)
+             VALUES (?, 'deposit', ?, 'Withdrawal failed - funds returned', 'completed')`,
+            [withdrawal.landlord_id, withdrawal.amount]
+          )
+
+          await connection.commit()
+          return { success: false, error: cashoutError, status: 'failed' }
+        }
+
+      } else if (status === 'cancelled') {
+        // If cancelled by admin, add balance back
+        await connection.query(
+          `UPDATE withdrawal_requests
+           SET status = ?, processed_by = ?, processed_at = NOW()
+           WHERE id = ?`,
+          ['cancelled', adminId, requestId]
+        )
+        
         await connection.query(
           `UPDATE landlord_wallet 
            SET balance = balance + ?, total_withdrawn = total_withdrawn - ?
@@ -196,20 +301,20 @@ export const processWithdrawal = async (requestId, status, adminId) => {
         
         await connection.query(
           `INSERT INTO payment_transactions (landlord_id, type, amount, description, status)
-           VALUES (?, 'deposit', ?, 'Withdrawal rejected - funds returned', 'completed')`,
+           VALUES (?, 'deposit', ?, 'Withdrawal cancelled by admin - funds returned', 'completed')`,
           [withdrawal.landlord_id, withdrawal.amount]
         )
       }
 
       await connection.commit()
+      return { success: true, status }
+
     } catch (error) {
       await connection.rollback()
       throw error
     } finally {
       connection.release()
     }
-
-    return { success: true, status }
   } catch (error) {
     console.error('Error processing withdrawal:', error)
     throw error

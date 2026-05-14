@@ -1,5 +1,5 @@
 // backend/src/controllers/invoiceController.js
-import paypack, { formatPhoneForPaypack } from '../config/paypack.js'
+import paypack from '../config/paypack.js'
 import {
   createInvoice, getInvoiceById, getTenantInvoices,
   getLandlordInvoices, getInvoicePayments, createInvoicePayment,
@@ -18,6 +18,7 @@ export const createNewInvoice = async (req, res) => {
       return res.status(400).json({ message: 'rental_id, amount, month_year and due_date are required' })
     }
 
+    // Check if invoice already exists for this month
     const [existing] = await pool.query(
       `SELECT id, status FROM invoices WHERE rental_id = ? AND month_year = ? AND status NOT IN ('cancelled', 'paid')`,
       [rental_id, month_year]
@@ -175,7 +176,7 @@ export const cancelInvoice = async (req, res) => {
   }
 };
 
-// POST /api/invoices/:id/pay — tenant initiates payment
+// POST /api/invoices/:id/pay — tenant initiates payment (REAL PAYMENTS)
 export const payInvoice = async (req, res) => {
   try {
     const { amount, phone, method } = req.body
@@ -203,9 +204,14 @@ export const payInvoice = async (req, res) => {
       return res.status(400).json({ message: `Amount exceeds remaining balance of RWF ${invoice.remaining}` })
     }
 
-    const formattedPhone = formatPhoneForPaypack(phone)
-    if (!formattedPhone) {
-      return res.status(400).json({ message: 'Enter a valid Rwanda mobile money number (e.g. 078… or 25078…).' })
+    // Format phone number for Rwanda
+    let formattedPhone = phone.trim().replace(/\s+/g, '')
+    if (formattedPhone.startsWith('07')) {
+      formattedPhone = '250' + formattedPhone.slice(1)
+    } else if (formattedPhone.startsWith('+250')) {
+      formattedPhone = formattedPhone.slice(1)
+    } else if (formattedPhone.startsWith('7')) {
+      formattedPhone = '250' + formattedPhone
     }
 
     // Create payment record
@@ -218,7 +224,8 @@ export const payInvoice = async (req, res) => {
 
     try {
       let paypackResponse = null
-
+      
+      // Process payment via PayPack cashin
       if (typeof paypack.cashin === 'function') {
         paypackResponse = await paypack.cashin({
           amount: parseFloat(amount),
@@ -226,46 +233,40 @@ export const payInvoice = async (req, res) => {
           mode: process.env.PAYPACK_MODE || 'live'
         })
       } else {
-        console.log('Using mock payment response')
-        paypackResponse = {
-          success: true,
-          data: {
-            ref: `MOCK_${Date.now()}`,
-            status: 'pending',
-            amount: amount
-          }
-        }
+        throw new Error('PayPack cashin method not available')
       }
 
-      if (!paypackResponse?.success) {
-        await updateInvoicePaymentStatus(paymentId, 'failed', null)
-        return res.status(400).json({
-          message: paypackResponse?.error || 'Payment could not be started with the mobile money provider.',
-          details: paypackResponse?.details
-        })
-      }
+      console.log('✅ PayPack payment initiated successfully')
+      console.log('   Response:', paypackResponse)
 
-      const paypackRef = paypackResponse.data?.ref || paypackResponse.ref
-      console.log('✅ Payment initiated, Paypack ref:', paypackRef)
+      const reference = paypackResponse?.data?.ref || paypackResponse?.ref
 
-      await updateInvoicePaymentStatus(paymentId, 'pending', paypackRef)
+      await updateInvoicePaymentStatus(paymentId, 'pending', reference)
 
       await logActivity(req.user.id, 'PAYMENT_INITIATED', `Initiated payment of RWF ${amount} for invoice #${invoice.id}`, 'payment', paymentId, req.ip)
 
-      const isSandbox = !!paypackResponse.sandbox || process.env.PAYPACK_MODE === 'sandbox'
+      // CREDIT LANDLORD'S WALLET AFTER SUCCESSFUL PAYMENT
+      try {
+        const { updateWalletBalance } = await import('../models/walletModel.js')
+        const landlordId = invoice.landlord_id
+        
+        await updateWalletBalance(landlordId, parseFloat(amount), 'credit')
+        
+        console.log(`💰 Credited RWF ${amount} to landlord ${landlordId}'s wallet`)
+      } catch (walletError) {
+        console.error('Failed to credit wallet:', walletError)
+        // Don't fail the payment if wallet update fails
+      }
 
       res.json({
-        message: isSandbox
-          ? 'Sandbox mode: no prompt is sent to your phone. Use live mode and valid Paypack keys for a real MoMo confirmation.'
-          : 'Payment initiated! Check your phone to confirm the payment.',
+        message: 'Payment initiated! Check your phone to confirm the payment.',
         payment_id: paymentId,
-        paypack_ref: paypackRef,
+        paypack_ref: reference,
         amount,
         phone: formattedPhone,
-        sandbox: isSandbox,
-        warning: isSandbox
-          ? 'Sandbox — no real charge and no carrier prompt.'
-          : 'Real money will be deducted from your mobile money account after you confirm on your phone.'
+        warning: process.env.PAYPACK_MODE === 'sandbox' 
+          ? 'Sandbox mode - no real money deducted' 
+          : 'Real money will be deducted from your mobile money account upon confirmation.'
       })
     } catch (paypackErr) {
       console.error('❌ Paypack error:', paypackErr.message)
@@ -309,6 +310,7 @@ export const paypackWebhook = async (req, res) => {
       const invoice = await getInvoiceById(payment.invoice_id)
 
       if (invoice) {
+        // Record in payments table for landlord view
         try {
           await pool.query(
             `INSERT INTO payments (rental_id, amount, payment_date, method, status, notes)
@@ -321,6 +323,16 @@ export const paypackWebhook = async (req, res) => {
             ]
           )
           console.log('✅ Payment recorded in payments table')
+          
+          // CREDIT LANDLORD'S WALLET (if not already credited)
+          try {
+            const { updateWalletBalance } = await import('../models/walletModel.js')
+            await updateWalletBalance(invoice.landlord_id, parseFloat(payment.amount), 'credit')
+            console.log(`💰 Credited RWF ${payment.amount} to landlord ${invoice.landlord_id}'s wallet via webhook`)
+          } catch (walletError) {
+            console.error('Failed to credit wallet via webhook:', walletError)
+          }
+          
         } catch (paymentsErr) {
           console.error('Failed to record in payments table:', paymentsErr.message)
         }
@@ -385,12 +397,8 @@ export const verifyPayment = async (req, res) => {
 
       if (typeof paypack.status === 'function') {
         const result = await paypack.status({ ref: payment.paypack_ref })
-        if (result?.error) {
-          console.warn('Paypack status error:', result.error)
-        } else {
-          transactionStatus = result?.data?.status || result?.status
-          console.log('📊 Status from paypack:', transactionStatus)
-        }
+        transactionStatus = result?.data?.status || result?.status
+        console.log('📊 Status from paypack:', transactionStatus)
       } else {
         transactionStatus = payment.status
       }
@@ -412,6 +420,14 @@ export const verifyPayment = async (req, res) => {
                 `Payment for ${invoice.month_year} - Invoice #${payment.invoice_id}`
               ]
             )
+            
+            // Credit wallet on verification
+            try {
+              const { updateWalletBalance } = await import('../models/walletModel.js')
+              await updateWalletBalance(invoice.landlord_id, parseFloat(payment.amount), 'credit')
+            } catch (walletError) {
+              console.error('Failed to credit wallet:', walletError)
+            }
           } catch (err) {
             console.error('Failed to record in payments:', err.message)
           }
@@ -463,6 +479,7 @@ export const testPaypackConnection = async (req, res) => {
       message: 'Paypack test',
       available_methods: methods,
       has_cashin: typeof paypack.cashin === 'function',
+      has_cashout: typeof paypack.cashout === 'function',
       mode: process.env.PAYPACK_MODE || 'live',
       paypack_ready: typeof paypack.cashin === 'function'
     })
