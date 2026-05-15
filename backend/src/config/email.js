@@ -2,9 +2,14 @@
 import dotenv from 'dotenv'
 dotenv.config()
 
-// Use Brevo's REST API directly with fetch (no SDK needed)
+// Use Brevo's REST API directly with fetch
 const BREVO_API_KEY = process.env.BREVO_API_KEY
 const BREVO_API_URL = 'https://api.brevo.com/v3'
+const SENDER_EMAIL = process.env.EMAIL_FROM || 'no-reply@brevo.com'
+
+console.log('📧 Email configuration loaded:')
+console.log('📧 Sender email:', SENDER_EMAIL)
+console.log('📧 API Key exists:', !!BREVO_API_KEY)
 
 export const sendOTPEmail = async (toEmail, otp, userName) => {
   try {
@@ -24,7 +29,7 @@ export const sendOTPEmail = async (toEmail, otp, userName) => {
       body: JSON.stringify({
         sender: {
           name: 'Smart Rental RW',
-          email: process.env.EMAIL_FROM || 'tuyisabeparfait888@gmail.com'
+          email: 'no-reply@brevo.com'  // Hardcoded to Brevo's verified sender
         },
         to: [{ email: toEmail, name: userName }],
         subject: 'Smart Rental RW — Verify Your Account',
@@ -82,7 +87,7 @@ export const sendResetEmail = async (toEmail, resetUrl, userName) => {
       body: JSON.stringify({
         sender: {
           name: 'Smart Rental RW',
-          email: process.env.EMAIL_FROM || 'tuyisabeparfait888@gmail.com'
+          email: 'no-reply@brevo.com'  // Hardcoded to Brevo's verified sender
         },
         to: [{ email: toEmail, name: userName }],
         subject: 'Smart Rental RW — Password Reset Request',
@@ -139,26 +144,11 @@ export const sendTestEmail = async (toEmail) => {
       body: JSON.stringify({
         sender: {
           name: 'Smart Rental RW',
-          email: process.env.EMAIL_FROM || 'tuyisabeparfait888@gmail.com'
+          email: 'no-reply@brevo.com'  // Hardcoded to Brevo's verified sender
         },
         to: [{ email: toEmail }],
         subject: 'Smart Rental RW — Test Email',
-        htmlContent: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #1d4ed8; padding: 24px; border-radius: 8px 8px 0 0;">
-              <h1 style="color: white;">🏠 Smart Rental RW</h1>
-            </div>
-            <div style="background: #f9fafb; padding: 32px; border-radius: 0 0 8px 8px;">
-              <h2>Email Configuration Test</h2>
-              <p>If you received this email, your email configuration is working correctly!</p>
-              <div style="background: #e5e7eb; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                <p><strong>Sent via:</strong> Brevo API</p>
-                <p><strong>From:</strong> ${process.env.EMAIL_FROM}</p>
-                <p><strong>Sent at:</strong> ${new Date().toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-        `
+        htmlContent: '<h1>Test Successful!</h1><p>Your email configuration is working!</p>'
       })
     })
 
