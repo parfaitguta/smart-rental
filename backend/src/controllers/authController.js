@@ -4,8 +4,7 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import pool from '../config/db.js'
 import { createUser, findUserByEmail, findUserById } from '../models/userModel.js'
-// CHANGE THIS LINE - use email-api.js instead of email.js
-import { sendResetEmail, sendOTPEmail } from '../config/email-api.js'
+import { sendResetEmail, sendOTPEmail } from '../config/email.js'
 import { LOG } from '../utils/activityLogger.js'
 
 const generateToken = (id) => {
