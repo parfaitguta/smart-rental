@@ -122,3 +122,57 @@ export const sendResetEmail = async (toEmail, resetUrl, userName) => {
     throw error
   }
 }
+
+export const sendTestEmail = async (toEmail) => {
+  try {
+    if (!BREVO_API_KEY) {
+      throw new Error('BREVO_API_KEY is not set in environment variables')
+    }
+
+    const response = await fetch(`${BREVO_API_URL}/smtp/email`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': BREVO_API_KEY
+      },
+      body: JSON.stringify({
+        sender: {
+          name: 'Smart Rental RW',
+          email: process.env.EMAIL_FROM || 'tuyisabeparfait888@gmail.com'
+        },
+        to: [{ email: toEmail }],
+        subject: 'Smart Rental RW — Test Email',
+        htmlContent: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1d4ed8; padding: 24px; border-radius: 8px 8px 0 0;">
+              <h1 style="color: white;">🏠 Smart Rental RW</h1>
+            </div>
+            <div style="background: #f9fafb; padding: 32px; border-radius: 0 0 8px 8px;">
+              <h2>Email Configuration Test</h2>
+              <p>If you received this email, your email configuration is working correctly!</p>
+              <div style="background: #e5e7eb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Sent via:</strong> Brevo API</p>
+                <p><strong>From:</strong> ${process.env.EMAIL_FROM}</p>
+                <p><strong>Sent at:</strong> ${new Date().toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        `
+      })
+    })
+
+    const data = await response.json()
+    
+    if (!response.ok) {
+      console.error('Brevo API error details:', data)
+      throw new Error(data.message || 'Failed to send test email')
+    }
+    
+    console.log('✅ Test email sent via Brevo API:', data.messageId)
+    return data
+  } catch (error) {
+    console.error('❌ Brevo API error:', error.message)
+    throw error
+  }
+}
