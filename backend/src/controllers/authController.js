@@ -4,7 +4,8 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import pool from '../config/db.js'
 import { createUser, findUserByEmail, findUserById } from '../models/userModel.js'
-import { sendResetEmail, sendOTPEmail } from '../config/email.js'
+// CHANGE THIS LINE - use email-api.js instead of email.js
+import { sendResetEmail, sendOTPEmail } from '../config/email-api.js'
 import { LOG } from '../utils/activityLogger.js'
 
 const generateToken = (id) => {
@@ -67,8 +68,7 @@ export const register = async (req, res) => {
       console.error('❌ OTP email failed:', emailError.message)
       await pool.query('DELETE FROM users WHERE id = ?', [userId])
       return res.status(503).json({
-        message:
-          'We could not send the verification email. Please try again in a few minutes, or check that email is configured on the server.'
+        message: 'We could not send the verification email. Please try again in a few minutes, or check that email is configured on the server.'
       })
     }
 
@@ -156,8 +156,7 @@ export const resendOTP = async (req, res) => {
         [prevCode, prevExpires, user.id]
       )
       return res.status(503).json({
-        message:
-          'We could not send the email. Please try again in a few minutes, or check that email is configured on the server.'
+        message: 'We could not send the email. Please try again in a few minutes, or check that email is configured on the server.'
       })
     }
 
@@ -233,11 +232,10 @@ export const forgotPassword = async (req, res) => {
       [resetToken, resetTokenExpires, user.id]
     )
 
-    // ✅ FIXED: Use FRONTEND_URL from environment variable instead of localhost
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetUrl = `${FRONTEND_URL}/reset-password/${resetToken}`;
 
-    console.log(`🔗 Reset URL: ${resetUrl}`); // Debug log
+    console.log(`🔗 Reset URL: ${resetUrl}`);
 
     try {
       await sendResetEmail(user.email, resetUrl, user.full_name)
