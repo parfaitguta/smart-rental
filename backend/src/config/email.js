@@ -5,7 +5,10 @@ dotenv.config()
 // Use Brevo's REST API directly with fetch
 const BREVO_API_KEY = process.env.BREVO_API_KEY
 const BREVO_API_URL = 'https://api.brevo.com/v3'
-const SENDER_EMAIL = process.env.EMAIL_FROM || 'no-reply@brevo.com'
+
+// Use Brevo's default verified sender
+const SENDER_EMAIL = 'no-reply@brevo.com'
+const SENDER_NAME = 'Smart Rental RW'
 
 console.log('📧 Email configuration loaded:')
 console.log('📧 Sender email:', SENDER_EMAIL)
@@ -28,8 +31,8 @@ export const sendOTPEmail = async (toEmail, otp, userName) => {
       },
       body: JSON.stringify({
         sender: {
-          name: 'Smart Rental RW',
-          email: 'no-reply@brevo.com'  // Hardcoded to Brevo's verified sender
+          name: SENDER_NAME,
+          email: SENDER_EMAIL  // Using Brevo's verified sender
         },
         to: [{ email: toEmail, name: userName }],
         subject: 'Smart Rental RW — Verify Your Account',
@@ -86,8 +89,8 @@ export const sendResetEmail = async (toEmail, resetUrl, userName) => {
       },
       body: JSON.stringify({
         sender: {
-          name: 'Smart Rental RW',
-          email: 'no-reply@brevo.com'  // Hardcoded to Brevo's verified sender
+          name: SENDER_NAME,
+          email: SENDER_EMAIL  // Using Brevo's verified sender
         },
         to: [{ email: toEmail, name: userName }],
         subject: 'Smart Rental RW — Password Reset Request',
@@ -143,8 +146,8 @@ export const sendTestEmail = async (toEmail) => {
       },
       body: JSON.stringify({
         sender: {
-          name: 'Smart Rental RW',
-          email: 'no-reply@brevo.com'  // Hardcoded to Brevo's verified sender
+          name: SENDER_NAME,
+          email: SENDER_EMAIL
         },
         to: [{ email: toEmail }],
         subject: 'Smart Rental RW — Test Email',
